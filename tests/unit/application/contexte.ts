@@ -47,7 +47,8 @@ export type Contexte = ReturnType<typeof creerContexte>;
 
 /** Ajoute directement un exemplaire de « Les Misérables » rangé sur l'étagère R1. */
 export async function ajouterExemplaireHugo(ctx: Contexte, id = 'ex-hugo'): Promise<Exemplaire> {
-  const exemplaire = Exemplaire.creer({ id, livre: hugo, emplacement: ctx.hierarchie.etagere1 });
+  const numero = Exemplaire.prochainNumero(await ctx.exemplaires.trouverParLivre(hugo.id));
+  const exemplaire = Exemplaire.creer({ id, livre: hugo, numero, emplacement: ctx.hierarchie.etagere1 });
   await ctx.exemplaires.enregistrer(exemplaire);
   return exemplaire;
 }

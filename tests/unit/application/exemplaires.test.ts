@@ -141,6 +141,21 @@ describe('AjouterExemplaire', () => {
     });
   });
 
+  describe('numéro d’exemplaire', () => {
+    it('numérote 1 le premier exemplaire d’une nouvelle œuvre', async () => {
+      ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: [], couverture: null });
+      expect((await ajouter().executer(parIsbn())).exemplaire.numero).toBe(1);
+    });
+
+    it('numérote à la suite les exemplaires d’une œuvre déjà présente, quel que soit le mode d’ajout', async () => {
+      await ajouterExemplaireHugo(ctx, 'ex-a'); // n°1
+      await ajouterExemplaireHugo(ctx, 'ex-b'); // n°2
+      const parIsbnExistant = await ajouter().executer(parIsbn(ISBN_HUGO.valeur));
+      const parLivreId = await ajouter().executer({ emplacementId: 'etagere-r2', livre: { type: 'existant', livreId: 'livre-hugo' } });
+      expect([parIsbnExistant.exemplaire.numero, parLivreId.exemplaire.numero]).toEqual([3, 4]);
+    });
+  });
+
   describe('nouvel exemplaire d’un livre existant', () => {
     it('réutilise le livre, sans catalogue ni nouvelle notice', async () => {
       const premier = await ajouter().executer({

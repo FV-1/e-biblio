@@ -120,12 +120,12 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
       beforeEach(async () => {
         for (const l of [hugo, zola, manuscrit]) await repos.livres.enregistrer(l);
 
-        bienRange = Exemplaire.creer({ id: 'ex-bien', livre: hugo, emplacement: h.etagere1 });
+        bienRange = Exemplaire.creer({ id: 'ex-bien', livre: hugo, numero: 1, emplacement: h.etagere1 });
         bienRange.enregistrerDetection(h.etagere1, date);
-        malRange = Exemplaire.creer({ id: 'ex-mal', livre: hugo, emplacement: h.etagere1 });
+        malRange = Exemplaire.creer({ id: 'ex-mal', livre: hugo, numero: 2, emplacement: h.etagere1 });
         malRange.enregistrerDetection(h.etagere2, date);
-        jamaisDetecte = Exemplaire.creer({ id: 'ex-jamais', livre: zola, emplacement: h.etagere1 });
-        sansIsbn = Exemplaire.creer({ id: 'ex-manuscrit', livre: manuscrit, emplacement: h.etagere2 });
+        jamaisDetecte = Exemplaire.creer({ id: 'ex-jamais', livre: zola, numero: 1, emplacement: h.etagere1 });
+        sansIsbn = Exemplaire.creer({ id: 'ex-manuscrit', livre: manuscrit, numero: 1, emplacement: h.etagere2 });
 
         for (const e of [bienRange, malRange, jamaisDetecte, sansIsbn]) await repos.exemplaires.enregistrer(e);
       });
@@ -181,8 +181,15 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
         expect(await repos.exemplaires.existeAvecEmplacement('rayon-romans')).toBe(false);
       });
 
-      it('trouverParLivre renvoie les exemplaires d’un livre, triés par id', async () => {
-        expect((await repos.exemplaires.trouverParLivre('livre-hugo')).map((e) => e.id)).toEqual(['ex-bien', 'ex-mal']);
+      it('trouverParLivre renvoie les exemplaires d’un livre, triés par numéro (et non par id)', async () => {
+        // id « ex-a » avant « ex-bien » dans l'ordre alphabétique, mais numéro 3.
+        await repos.exemplaires.enregistrer(Exemplaire.creer({ id: 'ex-a', livre: hugo, numero: 3, emplacement: h.etagere2 }));
+        const exemplaires = await repos.exemplaires.trouverParLivre('livre-hugo');
+        expect(exemplaires.map((e) => [e.id, e.numero])).toEqual([
+          ['ex-bien', 1],
+          ['ex-mal', 2],
+          ['ex-a', 3],
+        ]);
         expect(await repos.exemplaires.trouverParLivre('livre-inconnu')).toEqual([]);
       });
 

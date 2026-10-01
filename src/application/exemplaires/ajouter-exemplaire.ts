@@ -63,7 +63,8 @@ export class AjouterExemplaire {
     Exemplaire.verifierRangeable(emplacement);
 
     const { livre, source } = await this.obtenirLivre(commande.livre, isbn);
-    const exemplaire = Exemplaire.creer({ id: this.generateurId.generer(), livre, emplacement });
+    const numero = source === 'base' ? Exemplaire.prochainNumero(await this.exemplaires.trouverParLivre(livre.id)) : 1;
+    const exemplaire = Exemplaire.creer({ id: this.generateurId.generer(), livre, numero, emplacement });
 
     if (source !== 'base') await this.livres.enregistrer(livre);
     await this.exemplaires.enregistrer(exemplaire);

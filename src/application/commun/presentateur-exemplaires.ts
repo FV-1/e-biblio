@@ -34,6 +34,7 @@ export class PresentateurExemplaires {
       vues.push({
         id: exemplaire.id,
         livreId: livre.id,
+        numero: exemplaire.numero,
         isbn: livre.isbn?.valeur ?? null,
         livre: vueLivre(livre),
         emplacementTheorique: {

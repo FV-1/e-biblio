@@ -97,6 +97,15 @@ const MIGRATIONS: readonly (string | ((db: BaseSqlite) => void))[] = [
       maj.run({ id: l.id, titre_tri: cleTriTitre(livre), auteur_tri: cleTriAuteur(livre) });
     }
   },
+  // v4 : numéro lisible de chaque exemplaire pour son œuvre (1, 2, 3…). Les
+  // exemplaires existants sont numérotés dans l'ordre de leur identifiant.
+  `
+  ALTER TABLE exemplaires ADD COLUMN numero INTEGER NOT NULL DEFAULT 0;
+  UPDATE exemplaires SET numero = rang.n
+    FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY livre_id ORDER BY id) AS n FROM exemplaires) AS rang
+    WHERE exemplaires.id = rang.id;
+  CREATE UNIQUE INDEX idx_exemplaires_livre_numero ON exemplaires (livre_id, numero);
+  `,
 ];
 
 interface LivreSnapshotSql {

@@ -7,6 +7,7 @@ import type { BaseSqlite } from './connexion.js';
 interface LigneExemplaire {
   id: string;
   livre_id: string;
+  numero: number;
   emplacement_id: string;
   detection_emplacement_id: string | null;
   detection_date: string | null;
@@ -19,10 +20,10 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
     this.requetes = {
       parId: db.prepare<[string], LigneExemplaire>('SELECT * FROM exemplaires WHERE id = ?'),
       upsert: db.prepare<[LigneExemplaire]>(`
-        INSERT INTO exemplaires (id, livre_id, emplacement_id, detection_emplacement_id, detection_date)
-        VALUES (@id, @livre_id, @emplacement_id, @detection_emplacement_id, @detection_date)
+        INSERT INTO exemplaires (id, livre_id, numero, emplacement_id, detection_emplacement_id, detection_date)
+        VALUES (@id, @livre_id, @numero, @emplacement_id, @detection_emplacement_id, @detection_date)
         ON CONFLICT (id) DO UPDATE SET
-          livre_id = excluded.livre_id, emplacement_id = excluded.emplacement_id,
+          livre_id = excluded.livre_id, numero = excluded.numero, emplacement_id = excluded.emplacement_id,
           detection_emplacement_id = excluded.detection_emplacement_id,
           detection_date = excluded.detection_date
       `),
@@ -39,7 +40,7 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
         WHERE detection_emplacement_id IS NOT NULL AND detection_emplacement_id <> emplacement_id
         ORDER BY detection_date DESC, id
       `),
-      parLivre: db.prepare<[string], LigneExemplaire>('SELECT * FROM exemplaires WHERE livre_id = ? ORDER BY id'),
+      parLivre: db.prepare<[string], LigneExemplaire>('SELECT * FROM exemplaires WHERE livre_id = ? ORDER BY numero'),
       existeAvecEmplacement: db.prepare<[{ id: string }], { existe: number }>(`
         SELECT EXISTS (
           SELECT 1 FROM exemplaires WHERE emplacement_id = @id OR detection_emplacement_id = @id
@@ -58,6 +59,7 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
     this.requetes.upsert.run({
       id: s.id,
       livre_id: s.livreId,
+      numero: s.numero,
       emplacement_id: s.emplacementId,
       detection_emplacement_id: s.derniereDetection?.emplacementId ?? null,
       detection_date: s.derniereDetection?.date.toISOString() ?? null,
@@ -95,6 +97,7 @@ function versEntite(ligne: LigneExemplaire): Exemplaire {
   return Exemplaire.reconstituer({
     id: ligne.id,
     livreId: ligne.livre_id,
+    numero: ligne.numero,
     emplacementId: ligne.emplacement_id,
     derniereDetection:
       ligne.detection_emplacement_id !== null && ligne.detection_date !== null

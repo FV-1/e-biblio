@@ -50,7 +50,7 @@ describe('Base SQLite', () => {
     const repo = new SqliteEmplacementRepository(db);
     for (const e of h.tous) await repo.enregistrer(e);
     const livre = Livre.creer({ id: 'livre-absent', isbn: isbnHugo, titre: 'X', auteurs: [] });
-    const ex = Exemplaire.creer({ id: 'ex', livre, emplacement: h.etagere1 });
+    const ex = Exemplaire.creer({ id: 'ex', livre, numero: 1, emplacement: h.etagere1 });
     await expect(new SqliteExemplaireRepository(db).enregistrer(ex)).rejects.toThrow(/FOREIGN KEY/);
   });
 
@@ -102,6 +102,7 @@ describe('Migration v1 → v2 (ISBN facultatif)', () => {
     expect((await exemplaires.trouverParId('ex-1'))?.versSnapshot()).toEqual({
       id: 'ex-1',
       livreId: 'livre-9780306406157',
+      numero: 1, // attribué par la migration v4
       emplacementId: 't1',
       derniereDetection: { emplacementId: 't2', date: new Date('2026-01-01T00:00:00.000Z') },
     });
@@ -128,6 +129,35 @@ describe('Migration v2 → v3 (clés de tri)', () => {
       { id: 'a', titre_tri: "l'etranger", auteur_tri: 'albert camus' },
       { id: 'b', titre_tri: 'sans auteur', auteur_tri: '' },
     ]);
+    db.close();
+  });
+});
+
+describe('Migration v3 → v4 (numéro d’exemplaire)', () => {
+  it('numérote les exemplaires existants par œuvre, dans l’ordre de leur id, et interdit les doublons', () => {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    migrer(db, 3);
+    db.exec(`
+      INSERT INTO emplacements (id, type, nom, parent_id) VALUES
+        ('e', 'etage', 'É', NULL), ('s', 'salle', 'S', 'e'), ('r', 'rayon', 'R', 's'), ('t', 'etagere', 'T', 'r');
+      INSERT INTO livres (id, isbn, titre, auteurs, couverture, texte_recherche) VALUES
+        ('l1', NULL, 'A', '[]', NULL, 'a'), ('l2', NULL, 'B', '[]', NULL, 'b');
+      INSERT INTO exemplaires (id, livre_id, emplacement_id) VALUES
+        ('c', 'l1', 't'), ('a', 'l1', 't'), ('b', 'l2', 't'), ('d', 'l1', 't');
+    `);
+
+    migrer(db);
+
+    expect(db.prepare('SELECT id, livre_id, numero FROM exemplaires ORDER BY livre_id, numero').all()).toEqual([
+      { id: 'a', livre_id: 'l1', numero: 1 },
+      { id: 'c', livre_id: 'l1', numero: 2 },
+      { id: 'd', livre_id: 'l1', numero: 3 },
+      { id: 'b', livre_id: 'l2', numero: 1 },
+    ]);
+    expect(() => db.exec(`INSERT INTO exemplaires (id, livre_id, numero, emplacement_id) VALUES ('x', 'l1', 2, 't')`)).toThrow(
+      /UNIQUE/,
+    );
     db.close();
   });
 });

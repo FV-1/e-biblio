@@ -81,7 +81,7 @@ describe('ListerExemplairesDuLivre', () => {
   it('ne mélange pas les exemplaires de deux œuvres', async () => {
     const autre = Livre.creer({ id: 'l-autre', isbn: null, titre: 'Autre', auteurs: [] });
     await ctx.livres.enregistrer(autre);
-    await ctx.exemplaires.enregistrer(Exemplaire.creer({ id: 'ex-autre', livre: autre, emplacement: ctx.hierarchie.etagere2 }));
+    await ctx.exemplaires.enregistrer(Exemplaire.creer({ id: 'ex-autre', livre: autre, numero: 1, emplacement: ctx.hierarchie.etagere2 }));
     expect((await lister().executer('livre-hugo')).map((v) => v.id)).toEqual(['ex-1', 'ex-2']);
   });
 });

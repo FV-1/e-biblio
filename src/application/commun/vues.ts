@@ -38,6 +38,8 @@ export interface VuePosition {
 export interface VueExemplaire {
   readonly id: string;
   readonly livreId: string;
+  /** Numéro lisible de l'exemplaire pour son œuvre (1, 2, 3…). */
+  readonly numero: number;
   readonly isbn: string | null;
   readonly livre: VueLivre;
   /** Position théorique : où l'exemplaire doit être rangé. */

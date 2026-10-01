@@ -34,7 +34,7 @@ export class ExemplaireRepositoryEnMemoire implements ExemplaireRepository {
   async trouverParLivre(livreId: string): Promise<Exemplaire[]> {
     return this.tous()
       .filter((e) => e.livreId === livreId)
-      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      .sort((a, b) => a.numero - b.numero);
   }
 
   async existeAvecEmplacement(emplacementId: string): Promise<boolean> {
