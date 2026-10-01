@@ -129,7 +129,7 @@ describe('EcranBase', () => {
 
     expect(service.exemplairesDemandes).toEqual(['livre-1984']);
     const liste = await screen.findByRole('list', { name: 'Exemplaires de 1984' });
-    expect(within(liste).getByText('ex-1')).toBeInTheDocument();
+    expect(within(liste).getByText('Exemplaire n°1')).toHaveAttribute('title', 'Identifiant : ex-1');
     expect(within(liste).getByText('Jamais détecté')).toBeInTheDocument();
     expect(within(liste).getByRole('list', { name: /Étagère Romans 1/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Replier les exemplaires de 1984' })).toHaveAttribute('aria-expanded', 'true');
@@ -139,6 +139,16 @@ describe('EcranBase', () => {
 
     await u.click(screen.getByRole('button', { name: 'Replier les exemplaires de 1984' }));
     expect(screen.queryByRole('list', { name: 'Exemplaires de 1984' })).not.toBeInTheDocument();
+  });
+
+  it('copie l’identifiant d’un exemplaire sans replier la ligne', async () => {
+    const { u } = afficher();
+    await u.click(await screen.findByRole('button', { name: 'Déplier les exemplaires de 1984' }));
+    await u.click(await screen.findByRole('button', { name: 'Copier l’identifiant de l’exemplaire n°1' }));
+
+    expect(await navigator.clipboard.readText()).toBe('ex-1');
+    expect(screen.getByText('Identifiant copié')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Exemplaires de 1984' })).toBeInTheDocument();
   });
 
   it('un clic sur la ligne la déplie aussi ; une œuvre sans exemplaire le signale', async () => {

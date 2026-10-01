@@ -6,6 +6,7 @@ import { CheminLocalisation } from '../recherche/CheminLocalisation';
 import { formaterDate, pluriel } from '../recherche/format';
 import { useService } from '../service/contexte-service';
 import { IconePlus } from '../ui/icones';
+import { IdentifiantExemplaire } from '../ui/IdentifiantExemplaire';
 
 type Etat =
   | { readonly statut: 'chargement' }
@@ -58,7 +59,7 @@ export function DetailOeuvre({ oeuvre, onAjouterExemplaire }: Props) {
             {etat.exemplaires.map((ex) => (
               <li key={ex.id} className={`exemplaire${ex.malRange ? ' exemplaire-mal-range' : ''}`}>
                 <div className="exemplaire-entete">
-                  <code className="exemplaire-id">{ex.id}</code>
+                  <IdentifiantExemplaire id={ex.id} numero={ex.numero} />
                   <BadgeStatut exemplaire={ex} />
                 </div>
                 <CheminLocalisation localisation={ex.emplacementTheorique.localisation} />

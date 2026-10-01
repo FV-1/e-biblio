@@ -26,6 +26,8 @@ export const schemaLivre = z.object({
 export const schemaExemplaire = z.object({
   id: z.string(),
   livreId: z.string(),
+  /** Numéro lisible de l'exemplaire pour son œuvre (1, 2, 3…). */
+  numero: z.number(),
   isbn: z.string().nullable(),
   livre: schemaLivre,
   emplacementTheorique: z.object({ emplacementId: z.string(), localisation: schemaLocalisation }),

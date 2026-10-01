@@ -15,6 +15,7 @@ export function localisation(etagere: string, nom: string, coordonnees: Localisa
 export const exemplaireBienRange: Exemplaire = {
   id: 'ex-1',
   livreId: 'livre-1984',
+  numero: 1,
   isbn: '9782070368228',
   livre: {
     id: 'livre-1984',
@@ -31,6 +32,7 @@ export const exemplaireBienRange: Exemplaire = {
 export const exemplaireMalRange: Exemplaire = {
   id: 'ex-2',
   livreId: 'livre-hugo',
+  numero: 1,
   isbn: '9780306406157',
   livre: { id: 'livre-hugo', isbn: '9780306406157', titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: null },
   emplacementTheorique: { emplacementId: 'etagere-1-1-1', localisation: localisation('etagere-1-1-1', 'Étagère Romans 1', { x: 10, y: 10 }) },
@@ -45,6 +47,7 @@ export const exemplaireMalRange: Exemplaire = {
 export const exemplaireSansIsbn: Exemplaire = {
   id: 'ex-3',
   livreId: 'livre-registre',
+  numero: 1,
   isbn: null,
   livre: { id: 'livre-registre', isbn: null, titre: 'Registre paroissial 1789', auteurs: [], couverture: null },
   emplacementTheorique: { emplacementId: 'etagere-1-1-1', localisation: localisation('etagere-1-1-1', 'Étagère Romans 1', { x: 10, y: 10 }) },

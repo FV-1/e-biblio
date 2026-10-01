@@ -532,6 +532,10 @@ textarea:focus-visible {
 }
 
 .carte-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   margin: 6px 0 0;
   font-size: 0.85rem;
   color: var(--texte-doux);
@@ -1057,8 +1061,27 @@ textarea:focus-visible {
   gap: 10px;
 }
 
-.exemplaire-id {
+.identifiant-exemplaire {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.numero-exemplaire {
+  font-weight: 600;
+  color: var(--texte);
+  cursor: help;
+}
+
+.bouton-copier {
+  padding: 3px;
+  background: none;
   color: var(--texte-doux);
+}
+
+.bouton-copier:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--accent);
 }
 
 .exemplaire-vu-ailleurs {

@@ -1,5 +1,6 @@
 import type { Exemplaire, Livre } from '../../../commun/api';
 import { Couverture } from '../ui/Couverture';
+import { IdentifiantExemplaire } from '../ui/IdentifiantExemplaire';
 import { IconePlus } from '../ui/icones';
 import { BadgeStatut } from './BadgeStatut';
 import { CheminLocalisation } from './CheminLocalisation';
@@ -27,7 +28,9 @@ export function CarteExemplaire({ exemplaire, onAjouterExemplaire }: Props) {
         </header>
 
         <p className="carte-meta">
-          {exemplaire.isbn ? `ISBN ${exemplaire.isbn}` : 'Sans ISBN'} · Exemplaire <code>{exemplaire.id}</code>
+          <IdentifiantExemplaire id={exemplaire.id} numero={exemplaire.numero} />
+          <span aria-hidden="true">·</span>
+          <span>{exemplaire.isbn ? `ISBN ${exemplaire.isbn}` : 'Sans ISBN'}</span>
         </p>
 
         <section className="carte-section">
