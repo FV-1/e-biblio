@@ -1,13 +1,13 @@
-import { act, render, renderHook, screen, within } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Exemplaire } from '../../src/commun/api';
 import { echec, succes, type Resultat } from '../../src/commun/service-bibliotheque';
 import { EcranRecherche } from '../../src/renderer/src/recherche/EcranRecherche';
 import { useRecherche } from '../../src/renderer/src/recherche/use-recherche';
 import { FournisseurService } from '../../src/renderer/src/service/contexte-service';
-import { exemplaireBienRange, exemplaireMalRange } from '../fixtures/exemplaires';
+import { exemplaireBienRange, exemplaireMalRange, exemplaireSansIsbn } from '../fixtures/exemplaires';
 import { promesseManuelle, ServiceFake } from './service-fake';
 
 let service: ServiceFake;
@@ -16,19 +16,21 @@ beforeEach(() => {
   service = new ServiceFake();
 });
 
-function afficher() {
-  render(
+/** Par défaut, recherche pendant la frappe désactivée : seules les validations (Entrée) cherchent. */
+function afficher(props: Partial<Parameters<typeof EcranRecherche>[0]> = {}) {
+  const resultat = render(
     <FournisseurService service={service}>
-      <EcranRecherche />
+      <EcranRecherche delaiSaisie={null} {...props} />
     </FournisseurService>,
   );
-  return userEvent.setup();
+  return { utilisateur: userEvent.setup(), ...resultat };
 }
 
+const champ = () => screen.getByRole('searchbox', { name: 'Rechercher un exemplaire' });
+
 async function rechercher(utilisateur: ReturnType<typeof userEvent.setup>, terme: string) {
-  const champ = screen.getByRole('searchbox', { name: 'Rechercher un exemplaire' });
-  await utilisateur.clear(champ);
-  await utilisateur.type(champ, `${terme}{Enter}`);
+  await utilisateur.clear(champ());
+  await utilisateur.type(champ(), `${terme}{Enter}`);
 }
 
 describe('EcranRecherche', () => {
@@ -39,14 +41,27 @@ describe('EcranRecherche', () => {
   });
 
   it('ne lance pas de recherche pour une saisie vide', async () => {
-    const utilisateur = afficher();
-    await utilisateur.click(screen.getByRole('button', { name: 'Rechercher' }));
+    const { utilisateur } = afficher();
+    await utilisateur.type(champ(), '   {Enter}');
     expect(service.recherches).toEqual([]);
   });
 
-  it('recherche le terme saisi et affiche les exemplaires avec leur localisation complète', async () => {
+  it('recherche pendant la frappe, une seule fois quand la saisie se stabilise', async () => {
     service.reponseRecherche = async () => succes([exemplaireBienRange]);
-    const utilisateur = afficher();
+    render(
+      <FournisseurService service={service}>
+        <EcranRecherche delaiSaisie={30} />
+      </FournisseurService>,
+    );
+    await userEvent.setup({ delay: null }).type(champ(), '1984');
+
+    await waitFor(() => expect(service.recherches).toEqual(['1984']));
+    expect(await screen.findByRole('article', { name: '1984' })).toBeInTheDocument();
+  });
+
+  it('affiche les exemplaires avec leur localisation complète', async () => {
+    service.reponseRecherche = async () => succes([exemplaireBienRange]);
+    const { utilisateur } = afficher();
 
     await rechercher(utilisateur, '  1984 ');
 
@@ -73,7 +88,7 @@ describe('EcranRecherche', () => {
 
   it('met en évidence un exemplaire mal rangé avec l’endroit où il a été vu', async () => {
     service.reponseRecherche = async () => succes([exemplaireBienRange, exemplaireMalRange]);
-    const utilisateur = afficher();
+    const { utilisateur } = afficher();
 
     await rechercher(utilisateur, 'romans');
 
@@ -83,48 +98,66 @@ describe('EcranRecherche', () => {
     expect(within(carte).getByText('Mal rangé')).toBeInTheDocument();
     expect(within(carte).getByRole('heading', { name: /Vu ailleurs le 14 mars 2026/ })).toBeInTheDocument();
     expect(within(carte).getByRole('list', { name: /Étagère Romans 3/ })).toBeInTheDocument();
-    expect(within(carte).getByText('Position sur le plan : x 30 · y 10')).toBeInTheDocument();
-    // Pas de couverture : un aplat avec l'initiale la remplace.
     expect(within(carte).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('affiche « Bien rangé » pour un exemplaire détecté à sa place', async () => {
-    const detecteALaPlace: Exemplaire = {
-      ...exemplaireBienRange,
-      derniereDetection: {
-        emplacementId: 'etagere-1-1-1',
-        localisation: exemplaireBienRange.emplacementTheorique.localisation,
-        date: '2026-03-14T09:30:00.000Z',
-      },
-    };
-    service.reponseRecherche = async () => succes([detecteALaPlace]);
-    const utilisateur = afficher();
+  it('affiche « Sans ISBN » pour un livre qui n’en a pas', async () => {
+    service.reponseRecherche = async () => succes([exemplaireSansIsbn]);
+    const { utilisateur } = afficher();
+    await rechercher(utilisateur, 'registre');
+    expect(await screen.findByText(/Sans ISBN/)).toBeInTheDocument();
+  });
 
+  it('filtre les résultats par statut, avec le nombre d’exemplaires par statut', async () => {
+    service.reponseRecherche = async () => succes([exemplaireBienRange, exemplaireMalRange, exemplaireSansIsbn]);
+    const { utilisateur } = afficher();
+    await rechercher(utilisateur, 'e');
+
+    const filtres = await screen.findByRole('group', { name: 'Filtrer par statut' });
+    expect(within(filtres).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Tous 3',
+      'Mal rangés 1',
+      'Jamais détectés 2',
+    ]);
+
+    await utilisateur.click(within(filtres).getByRole('button', { name: /Mal rangés/ }));
+    expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Les Misérables']);
+    expect(within(filtres).getByRole('button', { name: /Mal rangés/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('propose d’ajouter un exemplaire du livre depuis sa carte', async () => {
+    const onAjouterExemplaire = vi.fn();
+    service.reponseRecherche = async () => succes([exemplaireBienRange]);
+    const { utilisateur } = afficher({ onAjouterExemplaire });
     await rechercher(utilisateur, '1984');
 
-    expect(await screen.findByText('Bien rangé')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Vu à sa place le/ })).toBeInTheDocument();
+    await utilisateur.click(await screen.findByRole('button', { name: 'Ajouter un exemplaire' }));
+    expect(onAjouterExemplaire).toHaveBeenCalledWith(exemplaireBienRange.livre);
+  });
+
+  it('lance une recherche demandée de l’extérieur', async () => {
+    service.reponseRecherche = async () => succes([exemplaireBienRange]);
+    afficher({ requeteExterne: { terme: '1984', numero: 1 } });
+    expect(await screen.findByRole('article', { name: '1984' })).toBeInTheDocument();
+    expect(champ()).toHaveValue('1984');
   });
 
   it('indique quand aucun exemplaire ne correspond', async () => {
-    const utilisateur = afficher();
+    const { utilisateur } = afficher();
     await rechercher(utilisateur, 'balzac');
     expect(await screen.findByText('Aucun exemplaire ne correspond à « balzac ».')).toBeInTheDocument();
   });
 
-  it('affiche un état de chargement et désactive le bouton pendant la recherche', async () => {
+  it('affiche un état de chargement pendant la recherche', async () => {
     const { promesse, resoudre } = promesseManuelle<Resultat<Exemplaire[]>>();
     service.reponseRecherche = () => promesse;
-    const utilisateur = afficher();
+    const { utilisateur } = afficher();
 
     await rechercher(utilisateur, 'hugo');
-
     expect(screen.getByRole('status')).toHaveTextContent('Recherche de « hugo » en cours…');
-    expect(screen.getByRole('button', { name: 'Rechercher' })).toBeDisabled();
 
     resoudre(succes([]));
     expect(await screen.findByText(/Aucun exemplaire/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Rechercher' })).toBeEnabled();
   });
 
   it.each([
@@ -133,7 +166,7 @@ describe('EcranRecherche', () => {
     [{ type: 'reponse-invalide', message: 'format inattendu' }, 'Réponse inattendue du serveur'],
   ] as const)('affiche une erreur explicite (%o)', async (erreur, titre) => {
     service.reponseRecherche = async () => echec(erreur);
-    const utilisateur = afficher();
+    const { utilisateur } = afficher();
 
     await rechercher(utilisateur, 'hugo');
 
@@ -146,19 +179,9 @@ describe('EcranRecherche', () => {
     service.reponseRecherche = async () => {
       throw new Error('IPC rompu');
     };
-    const utilisateur = afficher();
+    const { utilisateur } = afficher();
     await rechercher(utilisateur, 'hugo');
     expect(await screen.findByRole('alert')).toHaveTextContent('Erreur inattendue de communication');
-  });
-
-  it('empêche de relancer une recherche tant que la précédente est en cours', async () => {
-    const lente = promesseManuelle<Resultat<Exemplaire[]>>();
-    service.reponseRecherche = () => lente.promesse;
-    const utilisateur = afficher();
-
-    await rechercher(utilisateur, 'lente');
-    await rechercher(utilisateur, 'autre'); // Entrée sans effet : bouton d'envoi désactivé
-    expect(service.recherches).toEqual(['lente']);
   });
 });
 

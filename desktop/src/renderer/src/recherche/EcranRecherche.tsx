@@ -1,17 +1,69 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import type { Exemplaire, Livre } from '../../../commun/api';
 import type { ErreurService } from '../../../commun/service-bibliotheque';
+import { IconeAlerte, IconeRecherche } from '../ui/icones';
 import { CarteExemplaire } from './CarteExemplaire';
 import { pluriel } from './format';
 import { useRecherche, type EtatRecherche } from './use-recherche';
 
-export function EcranRecherche() {
+type Filtre = 'tous' | 'mal-ranges' | 'jamais-detectes' | 'bien-ranges';
+
+const FILTRES: { id: Filtre; libelle: string; garde: (e: Exemplaire) => boolean }[] = [
+  { id: 'tous', libelle: 'Tous', garde: () => true },
+  { id: 'mal-ranges', libelle: 'Mal rangés', garde: (e) => e.malRange },
+  { id: 'jamais-detectes', libelle: 'Jamais détectés', garde: (e) => e.derniereDetection === null },
+  { id: 'bien-ranges', libelle: 'Bien rangés', garde: (e) => !e.malRange && e.derniereDetection !== null },
+];
+
+interface Props {
+  /** Ouvre l'écran d'ajout avec ce livre présélectionné. */
+  readonly onAjouterExemplaire?: (livre: Livre) => void;
+  /** Recherche déclenchée de l'extérieur (ex. « Voir dans la recherche » après un ajout). */
+  readonly requeteExterne?: { readonly terme: string; readonly numero: number } | null;
+  /** Délai (ms) avant la recherche automatique pendant la frappe ; null la désactive. */
+  readonly delaiSaisie?: number | null;
+  /** Compteur incrémenté pour demander le focus du champ de recherche. */
+  readonly demandeFocus?: number;
+}
+
+export function EcranRecherche({ onAjouterExemplaire, requeteExterne = null, delaiSaisie = 300, demandeFocus = 0 }: Props) {
   const { etat, rechercher } = useRecherche();
   const [saisie, setSaisie] = useState('');
+  const [filtre, setFiltre] = useState<Filtre>('tous');
+  const champ = useRef<HTMLInputElement>(null);
+  const minuterie = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const lancer = (terme: string) => {
+    clearTimeout(minuterie.current);
+    setFiltre('tous');
+    void rechercher(terme);
+  };
+
+  const saisir = (valeur: string) => {
+    setSaisie(valeur);
+    clearTimeout(minuterie.current);
+    if (delaiSaisie !== null) minuterie.current = setTimeout(() => lancer(valeur), delaiSaisie);
+  };
 
   const soumettre = (evenement: FormEvent) => {
     evenement.preventDefault();
-    void rechercher(saisie);
+    lancer(saisie);
   };
+
+  useEffect(() => () => clearTimeout(minuterie.current), []);
+
+  useEffect(() => {
+    if (!requeteExterne) return;
+    setSaisie(requeteExterne.terme);
+    lancer(requeteExterne.terme);
+  }, [requeteExterne]);
+
+  // Demande de focus (raccourci Ctrl+K géré par l'application).
+  useEffect(() => {
+    if (!demandeFocus) return;
+    champ.current?.focus();
+    champ.current?.select();
+  }, [demandeFocus]);
 
   return (
     <section className="ecran-recherche">
@@ -19,61 +71,116 @@ export function EcranRecherche() {
         <label htmlFor="champ-recherche" className="visuellement-cache">
           Rechercher un exemplaire
         </label>
+        <IconeRecherche className="icone-champ" />
         <input
+          ref={champ}
           id="champ-recherche"
           type="search"
           value={saisie}
-          onChange={(e) => setSaisie(e.target.value)}
+          onChange={(e) => saisir(e.target.value)}
           placeholder="Titre, auteur ou ISBN"
           maxLength={200}
+          autoComplete="off"
           autoFocus
         />
-        <button type="submit" disabled={etat.statut === 'chargement'}>
-          Rechercher
-        </button>
+        <kbd className="raccourci" aria-hidden="true">
+          Ctrl K
+        </kbd>
       </form>
 
-      <Resultats etat={etat} />
+      <Resultats etat={etat} filtre={filtre} onFiltre={setFiltre} onAjouterExemplaire={onAjouterExemplaire} />
     </section>
   );
 }
 
-function Resultats({ etat }: { etat: EtatRecherche }) {
+function Resultats({
+  etat,
+  filtre,
+  onFiltre,
+  onAjouterExemplaire,
+}: {
+  etat: EtatRecherche;
+  filtre: Filtre;
+  onFiltre: (f: Filtre) => void;
+  onAjouterExemplaire: Props['onAjouterExemplaire'];
+}) {
+  const comptes = useMemo(() => {
+    const exemplaires = etat.statut === 'succes' ? etat.exemplaires : [];
+    return Object.fromEntries(FILTRES.map((f) => [f.id, exemplaires.filter(f.garde).length])) as Record<Filtre, number>;
+  }, [etat]);
+
   switch (etat.statut) {
     case 'initial':
-      return <p className="message">Saisissez un titre, un auteur ou un ISBN pour localiser un exemplaire.</p>;
+      return (
+        <div className="etat-vide">
+          <IconeRecherche width={36} height={36} />
+          <p>Saisissez un titre, un auteur ou un ISBN pour localiser un exemplaire.</p>
+        </div>
+      );
 
     case 'chargement':
       return (
-        <p className="message" role="status">
-          Recherche de « {etat.terme} » en cours…
-        </p>
+        <div aria-busy="true">
+          <p className="compteur" role="status">
+            Recherche de « {etat.terme} » en cours…
+          </p>
+          <div className="liste-resultats" aria-hidden="true">
+            <div className="carte carte-squelette" />
+            <div className="carte carte-squelette" />
+          </div>
+        </div>
       );
 
     case 'erreur':
       return (
-        <div className="message message-erreur" role="alert">
-          <strong>{titreErreur(etat.erreur)}</strong>
-          <p>{etat.erreur.message}</p>
+        <div className="encart encart-alerte" role="alert">
+          <IconeAlerte />
+          <div>
+            <strong>{titreErreur(etat.erreur)}</strong>
+            <p>{etat.erreur.message}</p>
+          </div>
         </div>
       );
 
-    case 'succes':
+    case 'succes': {
       if (etat.exemplaires.length === 0) {
-        return <p className="message">Aucun exemplaire ne correspond à « {etat.terme} ».</p>;
+        return (
+          <div className="etat-vide">
+            <p>Aucun exemplaire ne correspond à « {etat.terme} ».</p>
+            <p className="aide">Vérifiez l’orthographe, ou cherchez par auteur ou par ISBN.</p>
+          </div>
+        );
       }
+      const garde = FILTRES.find((f) => f.id === filtre)!.garde;
+      const visibles = etat.exemplaires.filter(garde);
       return (
         <>
-          <p className="compteur" role="status">
-            {pluriel(etat.exemplaires.length, 'exemplaire trouvé', 'exemplaires trouvés')} pour « {etat.terme} »
-          </p>
+          <div className="ligne-resultats">
+            <p className="compteur" role="status">
+              {pluriel(etat.exemplaires.length, 'exemplaire trouvé', 'exemplaires trouvés')} pour « {etat.terme} »
+            </p>
+            <div className="filtres" role="group" aria-label="Filtrer par statut">
+              {FILTRES.filter((f) => f.id === 'tous' || comptes[f.id] > 0).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`puce${filtre === f.id ? ' puce-active' : ''}`}
+                  aria-pressed={filtre === f.id}
+                  onClick={() => onFiltre(f.id)}
+                >
+                  {f.libelle} <span className="puce-compte">{comptes[f.id]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="liste-resultats">
-            {etat.exemplaires.map((exemplaire) => (
-              <CarteExemplaire key={exemplaire.id} exemplaire={exemplaire} />
+            {visibles.map((exemplaire) => (
+              <CarteExemplaire key={exemplaire.id} exemplaire={exemplaire} onAjouterExemplaire={onAjouterExemplaire} />
             ))}
           </div>
         </>
       );
+    }
   }
 }
 

@@ -13,7 +13,7 @@ export default defineConfig({
         plugins: [react()],
         test: {
           name: 'renderer',
-          include: ['tests/renderer/**/*.test.tsx'],
+          include: ['tests/renderer/**/*.test.{ts,tsx}'],
           environment: 'jsdom',
           setupFiles: ['tests/renderer/setup.ts'],
         },
