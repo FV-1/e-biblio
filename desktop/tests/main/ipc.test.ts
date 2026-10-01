@@ -36,6 +36,14 @@ function serviceEspion() {
       appels.push({ methode: 'modifierUrl', argument: url });
       return succes(CONFIGURATION);
     },
+    listerLivres: async (criteres) => {
+      appels.push({ methode: 'listerLivres', argument: criteres });
+      return succes({ livres: [], total: 0, page: 1, parPage: 25, pages: 1 });
+    },
+    listerExemplairesDuLivre: async (livreId) => {
+      appels.push({ methode: 'listerExemplairesDuLivre', argument: livreId });
+      return succes([]);
+    },
     demarrerAppairage: async () => {
       appels.push({ methode: 'demarrerAppairage', argument: undefined });
       return succes({ adresses: [] });
@@ -110,7 +118,23 @@ describe('brancherIpc', () => {
     ]);
   });
 
+  it('relaie la liste des œuvres et les exemplaires d’une œuvre', async () => {
+    const { appeler, appels } = brancher();
+    const criteres = { terme: 'zola', tri: 'titre', ordre: 'asc', page: 1, parPage: 25 };
+    await appeler(CANAUX_IPC.listerLivres, criteres);
+    await appeler(CANAUX_IPC.listerExemplairesDuLivre, 'livre-1');
+    expect(appels).toEqual([
+      { methode: 'listerLivres', argument: criteres },
+      { methode: 'listerExemplairesDuLivre', argument: 'livre-1' },
+    ]);
+  });
+
   it.each([
+    [CANAUX_IPC.listerLivres, { tri: 'pirate', ordre: 'asc', page: 1, parPage: 25 }],
+    [CANAUX_IPC.listerLivres, { tri: 'titre', ordre: 'asc', page: 0, parPage: 25 }],
+    [CANAUX_IPC.listerLivres, { tri: 'titre', ordre: 'asc', page: 1, parPage: 1000 }],
+    [CANAUX_IPC.listerExemplairesDuLivre, ''],
+    [CANAUX_IPC.listerExemplairesDuLivre, 12],
     [CANAUX_IPC.consulterNotice, 42],
     [CANAUX_IPC.consulterNotice, ''],
     [CANAUX_IPC.ajouterExemplaire, { emplacementId: 'e1' }],

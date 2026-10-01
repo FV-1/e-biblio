@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron';
 import { z } from 'zod';
-import { schemaDemandeAjout } from '../commun/api';
+import { schemaCriteresLivres, schemaDemandeAjout } from '../commun/api';
 import { CANAUX_IPC, echec, type ServiceInvocable } from '../commun/service-bibliotheque';
 
 /**
@@ -28,6 +28,16 @@ export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceInvoca
   ipc.handle(CANAUX_IPC.ajouterExemplaire, async (_evenement, demande: unknown) => {
     const valide = schemaDemandeAjout.safeParse(demande);
     return valide.success ? service.ajouterExemplaire(valide.data) : invalide('Demande d’ajout invalide');
+  });
+
+  ipc.handle(CANAUX_IPC.listerLivres, async (_evenement, criteres: unknown) => {
+    const valide = schemaCriteresLivres.safeParse(criteres);
+    return valide.success ? service.listerLivres(valide.data) : invalide('Critères de liste invalides');
+  });
+
+  ipc.handle(CANAUX_IPC.listerExemplairesDuLivre, async (_evenement, livreId: unknown) => {
+    const valide = z.string().min(1).max(200).safeParse(livreId);
+    return valide.success ? service.listerExemplairesDuLivre(valide.data) : invalide('Identifiant de livre invalide');
   });
 
   ipc.handle(CANAUX_IPC.demarrerAppairage, async () => service.demarrerAppairage());

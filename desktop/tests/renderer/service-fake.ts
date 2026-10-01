@@ -1,4 +1,12 @@
-import type { DemandeAjout, Emplacement, Exemplaire, ExemplaireAjoute, Notice } from '../../src/commun/api';
+import type {
+  CriteresLivres,
+  DemandeAjout,
+  Emplacement,
+  Exemplaire,
+  ExemplaireAjoute,
+  Notice,
+  PageLivres,
+} from '../../src/commun/api';
 import {
   echec,
   succes,
@@ -32,6 +40,23 @@ export class ServiceFake implements ServiceBibliotheque {
     echec({ type: 'erreur-api', code: 'LIVRE_INCONNU_DU_CATALOGUE', message: 'ISBN inconnu du catalogue' });
   reponseAjout: (demande: DemandeAjout) => Promise<Resultat<ExemplaireAjoute>> = async () =>
     echec({ type: 'serveur-injoignable', message: 'non configuré' });
+
+  // --- Vue « base de données » ---
+  readonly listesDemandees: CriteresLivres[] = [];
+  readonly exemplairesDemandes: string[] = [];
+  reponseLivres: (criteres: CriteresLivres) => Promise<Resultat<PageLivres>> = async (c) =>
+    succes({ livres: [], total: 0, page: c.page, parPage: c.parPage, pages: 1 });
+  reponseExemplairesDuLivre: (livreId: string) => Promise<Resultat<Exemplaire[]>> = async () => succes([]);
+
+  listerLivres(criteres: CriteresLivres): Promise<Resultat<PageLivres>> {
+    this.listesDemandees.push(criteres);
+    return this.reponseLivres(criteres);
+  }
+
+  listerExemplairesDuLivre(livreId: string): Promise<Resultat<Exemplaire[]>> {
+    this.exemplairesDemandes.push(livreId);
+    return this.reponseExemplairesDuLivre(livreId);
+  }
 
   listerEmplacements(): Promise<Resultat<Emplacement[]>> {
     return this.reponseEmplacements();

@@ -57,6 +57,31 @@ export const schemaNotice = z.object({
   livre: schemaLivre.extend({ id: z.string().nullable(), isbn: z.string() }),
 });
 
+/** Une ligne de la vue « base de données » : une œuvre et ses compteurs. */
+export const schemaLigneLivre = schemaLivre.extend({
+  nombreExemplaires: z.number(),
+  nombreMalRanges: z.number(),
+});
+
+export const schemaPageLivres = z.object({
+  livres: z.array(schemaLigneLivre),
+  total: z.number(),
+  page: z.number(),
+  parPage: z.number(),
+  pages: z.number(),
+});
+
+/** Critères de la vue « base de données », validés à l'entrée du processus main. */
+export const schemaCriteresLivres = z.object({
+  terme: z.string().max(200).optional(),
+  isbn: z.enum(['avec', 'sans']).optional(),
+  couverture: z.enum(['avec', 'sans']).optional(),
+  tri: z.enum(['titre', 'auteur', 'exemplaires', 'malRanges']),
+  ordre: z.enum(['asc', 'desc']),
+  page: z.number().int().min(1),
+  parPage: z.number().int().min(1).max(100),
+});
+
 export const schemaSante = z.object({ statut: z.literal('ok') });
 
 /** Format commun des erreurs renvoyées par le serveur. */
@@ -90,3 +115,7 @@ export type ExemplaireAjoute = z.infer<typeof schemaExemplaireAjoute>;
 export type Emplacement = z.infer<typeof schemaEmplacement>;
 export type Notice = z.infer<typeof schemaNotice>;
 export type DemandeAjout = z.infer<typeof schemaDemandeAjout>;
+export type LigneLivre = z.infer<typeof schemaLigneLivre>;
+export type PageLivres = z.infer<typeof schemaPageLivres>;
+export type CriteresLivres = z.infer<typeof schemaCriteresLivres>;
+export type TriLivres = CriteresLivres['tri'];

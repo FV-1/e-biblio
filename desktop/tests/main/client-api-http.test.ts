@@ -142,6 +142,35 @@ describe('ClientApiHttp : emplacements, notices et ajout', () => {
     expect(requetes).toEqual([{ methode: 'POST', url: '/exemplaires', corps: corpsAttendu }]);
   });
 
+  it('liste les œuvres en traduisant les critères en paramètres d’URL', async () => {
+    const page = { livres: [{ ...exemplaireBienRange.livre, nombreExemplaires: 2, nombreMalRanges: 0 }], total: 1, page: 2, parPage: 10, pages: 1 };
+    const requetes: string[] = [];
+    const c = new ClientApiHttp({
+      urlServeur: () => 'http://serveur.test',
+      delaiMaxMs: 1000,
+      fetch: (async (url: URL) => {
+        requetes.push(`${url.pathname}${url.search}`);
+        return json(page);
+      }) as unknown as typeof fetch,
+    });
+
+    expect(await c.listerLivres({ terme: ' zola & co ', isbn: 'sans', tri: 'auteur', ordre: 'desc', page: 2, parPage: 10 })).toEqual({
+      ok: true,
+      valeur: page,
+    });
+    await c.listerLivres({ terme: '  ', tri: 'titre', ordre: 'asc', page: 1, parPage: 25 });
+    expect(requetes).toEqual([
+      '/livres?tri=auteur&ordre=desc&page=2&parPage=10&q=zola+%26+co&isbn=sans',
+      '/livres?tri=titre&ordre=asc&page=1&parPage=25',
+    ]);
+  });
+
+  it('liste les exemplaires d’une œuvre', async () => {
+    const { c, requetes } = clientEspion(json([exemplaireBienRange]));
+    expect(await c.listerExemplairesDuLivre('livre/1984')).toEqual({ ok: true, valeur: [exemplaireBienRange] });
+    expect(requetes[0]?.url).toBe('/exemplaires');
+  });
+
   it('transmet l’erreur métier d’un ajout refusé', async () => {
     const { c } = clientEspion(json({ erreur: { code: 'CATALOGUE_INDISPONIBLE', message: 'hors ligne' } }, 422));
     expect(await c.ajouterExemplaire({ emplacementId: 'e1', livre: { type: 'isbn', isbn: '9782070368228' } })).toEqual({

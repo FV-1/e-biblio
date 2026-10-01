@@ -5,8 +5,11 @@ import {
   schemaListeEmplacements,
   schemaListeExemplaires,
   schemaNotice,
+  schemaPageLivres,
   schemaSante,
+  type CriteresLivres,
   type DemandeAjout,
+  type PageLivres,
   type Emplacement,
   type Exemplaire,
   type ExemplaireAjoute,
@@ -55,6 +58,24 @@ export class ClientApiHttp implements ServiceRecherche {
 
   async ajouterExemplaire(demande: DemandeAjout): Promise<Resultat<ExemplaireAjoute>> {
     return this.requete('POST', '/exemplaires', schemaExemplaireAjoute, corpsAjout(demande));
+  }
+
+  async listerLivres(criteres: CriteresLivres): Promise<Resultat<PageLivres>> {
+    const parametres = new URLSearchParams({
+      tri: criteres.tri,
+      ordre: criteres.ordre,
+      page: String(criteres.page),
+      parPage: String(criteres.parPage),
+    });
+    const terme = criteres.terme?.trim();
+    if (terme) parametres.set('q', terme);
+    if (criteres.isbn) parametres.set('isbn', criteres.isbn);
+    if (criteres.couverture) parametres.set('couverture', criteres.couverture);
+    return this.get(`/livres?${parametres}`, schemaPageLivres);
+  }
+
+  async listerExemplairesDuLivre(livreId: string): Promise<Resultat<Exemplaire[]>> {
+    return this.get(`/exemplaires?livreId=${encodeURIComponent(livreId)}`, schemaListeExemplaires);
   }
 
   private get<T>(chemin: string, schema: z.ZodType<T>): Promise<Resultat<T>> {

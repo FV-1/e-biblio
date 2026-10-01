@@ -1,4 +1,4 @@
-import type { DemandeAjout, Emplacement, Exemplaire, ExemplaireAjoute, Notice } from './api';
+import type { CriteresLivres, DemandeAjout, Emplacement, Exemplaire, ExemplaireAjoute, Notice, PageLivres } from './api';
 
 /**
  * Erreurs possibles, toujours renvoyées comme des valeurs (jamais levées) :
@@ -36,6 +36,9 @@ export interface ServiceRecherche {
   /** Aperçu de la notice d'un ISBN, sans rien enregistrer. */
   consulterNotice(isbn: string): Promise<Resultat<Notice>>;
   ajouterExemplaire(demande: DemandeAjout): Promise<Resultat<ExemplaireAjoute>>;
+  /** Vue « base de données » : œuvres filtrées, triées et paginées. */
+  listerLivres(criteres: CriteresLivres): Promise<Resultat<PageLivres>>;
+  listerExemplairesDuLivre(livreId: string): Promise<Resultat<Exemplaire[]>>;
 }
 
 /** Réglages du client (implémenté par le stockage de configuration). */
@@ -88,6 +91,8 @@ export const CANAUX_IPC = {
   listerEmplacements: 'biblio:lister-emplacements',
   consulterNotice: 'biblio:consulter-notice',
   ajouterExemplaire: 'biblio:ajouter-exemplaire',
+  listerLivres: 'biblio:lister-livres',
+  listerExemplairesDuLivre: 'biblio:lister-exemplaires-du-livre',
   lireConfiguration: 'biblio:lire-configuration',
   modifierUrlServeur: 'biblio:modifier-url-serveur',
   demarrerAppairage: 'biblio:demarrer-appairage',
