@@ -5,5 +5,5 @@
     "lib": ["ES2024"],
     "types": ["node"]
   },
-  "include": ["src/main", "src/preload", "src/commun", "tests/main", "electron.vite.config.ts", "vitest.config.ts"]
+  "include": ["src/main", "src/preload", "src/commun", "tests/main", "tests/fixtures", "electron.vite.config.ts", "vitest.config.ts"]
 }

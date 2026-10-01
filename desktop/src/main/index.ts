@@ -1,9 +1,13 @@
 import { join } from 'node:path';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { ClientApiHttp } from './client-api-http';
+import { brancherIpc } from './ipc';
 
 /**
  * Processus main : point d'entrée Electron et composition root du client desktop.
  */
+const URL_SERVEUR = process.env.BIBLIO_API_URL ?? 'http://localhost:3000';
+
 function creerFenetre(): BrowserWindow {
   const fenetre = new BrowserWindow({
     width: 1100,
@@ -37,6 +41,8 @@ function creerFenetre(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const client = new ClientApiHttp({ urlServeur: () => URL_SERVEUR, delaiMaxMs: 5000 });
+  brancherIpc(ipcMain, client);
   creerFenetre();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) creerFenetre();
