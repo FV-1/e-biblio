@@ -15,4 +15,12 @@ export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceBiblio
   });
 
   ipc.handle(CANAUX_IPC.verifierConnexion, async () => service.verifierConnexion());
+
+  ipc.handle(CANAUX_IPC.lireConfiguration, async () => service.lireConfiguration());
+
+  ipc.handle(CANAUX_IPC.modifierUrlServeur, async (_evenement, url: unknown) => {
+    const valide = z.string().max(500).nullable().safeParse(url);
+    if (!valide.success) return echec({ type: 'requete-invalide', message: 'URL invalide' });
+    return service.modifierUrlServeur(valide.data);
+  });
 }

@@ -9,6 +9,8 @@ import { CANAUX_IPC, type ServiceBibliotheque } from '../commun/service-biblioth
 const service: ServiceBibliotheque = {
   rechercherExemplaires: (terme) => ipcRenderer.invoke(CANAUX_IPC.rechercherExemplaires, terme),
   verifierConnexion: () => ipcRenderer.invoke(CANAUX_IPC.verifierConnexion),
+  lireConfiguration: () => ipcRenderer.invoke(CANAUX_IPC.lireConfiguration),
+  modifierUrlServeur: (url) => ipcRenderer.invoke(CANAUX_IPC.modifierUrlServeur, url),
 };
 
 contextBridge.exposeInMainWorld('biblio', service);

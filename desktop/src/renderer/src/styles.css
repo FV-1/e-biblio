@@ -308,6 +308,92 @@ button.secondaire {
   color: var(--texte-doux);
 }
 
+/* --- Paramètres du serveur --- */
+
+.parametres-serveur {
+  padding: 10px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.serveur-resume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.serveur-resume button,
+.serveur-edition button {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.voyant {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--texte-doux);
+}
+
+.voyant-connecte {
+  background: var(--succes);
+}
+
+.voyant-injoignable {
+  background: var(--alerte);
+}
+
+.serveur-infos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.serveur-url {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.serveur-statut {
+  color: var(--texte-doux);
+  font-size: 0.8rem;
+}
+
+.serveur-edition label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.serveur-edition-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.serveur-edition-ligne input {
+  flex: 1;
+  min-width: 14rem;
+  padding: 6px 10px;
+}
+
+.erreur-champ {
+  margin: 6px 0 0;
+  color: var(--alerte);
+}
+
+button.lien {
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
 @media (max-width: 560px) {
   .carte {
     flex-direction: column;

@@ -18,19 +18,41 @@ export type Resultat<T> =
 export const succes = <T>(valeur: T): Resultat<T> => ({ ok: true, valeur });
 export const echec = <T>(erreur: ErreurService): Resultat<T> => ({ ok: false, erreur });
 
-/**
- * PORT du client desktop : tout ce dont l'interface a besoin.
- * - Implémenté dans le processus main par le client HTTP (ClientApiHttp).
- * - Ré-exposé à la page par le preload, qui relaie chaque appel via IPC.
- * - Remplacé par un fake dans les tests des composants React.
- */
-export interface ServiceBibliotheque {
+/** D'où vient l'URL utilisée : réglage de l'interface > variable BIBLIO_API_URL > valeur par défaut. */
+export type SourceUrl = 'interface' | 'environnement' | 'defaut';
+
+export interface Configuration {
+  readonly urlServeur: string;
+  readonly source: SourceUrl;
+  /** URL qui serait utilisée sans réglage dans l'interface (variable d'environnement ou défaut). */
+  readonly urlParDefaut: string;
+}
+
+/** Accès aux données de la bibliothèque (implémenté par le client HTTP). */
+export interface ServiceRecherche {
   rechercherExemplaires(terme: string): Promise<Resultat<Exemplaire[]>>;
   verifierConnexion(): Promise<Resultat<null>>;
 }
+
+/** Réglages du client (implémenté par le stockage de configuration). */
+export interface ServiceConfiguration {
+  lireConfiguration(): Promise<Configuration>;
+  /** `null` supprime le réglage de l'interface et revient à l'URL par défaut. */
+  modifierUrlServeur(url: string | null): Promise<Resultat<Configuration>>;
+}
+
+/**
+ * PORT complet du client desktop : tout ce dont l'interface a besoin.
+ * Composé de deux ports plus petits (ségrégation des interfaces), assemblés
+ * dans le processus main ; ré-exposé à la page par le preload via IPC ;
+ * remplacé par un fake dans les tests des composants React.
+ */
+export interface ServiceBibliotheque extends ServiceRecherche, ServiceConfiguration {}
 
 /** Noms des canaux IPC, partagés par le main (qui écoute) et le preload (qui appelle). */
 export const CANAUX_IPC = {
   rechercherExemplaires: 'biblio:rechercher-exemplaires',
   verifierConnexion: 'biblio:verifier-connexion',
+  lireConfiguration: 'biblio:lire-configuration',
+  modifierUrlServeur: 'biblio:modifier-url-serveur',
 } as const;

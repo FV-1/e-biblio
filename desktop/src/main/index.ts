@@ -1,12 +1,29 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
+import type { ServiceBibliotheque } from '../commun/service-bibliotheque';
 import { ClientApiHttp } from './client-api-http';
 import { brancherIpc } from './ipc';
+import { StockageConfiguration } from './stockage-configuration';
 
 /**
  * Processus main : point d'entrée Electron et composition root du client desktop.
+ * Seul endroit qui connaît les implémentations concrètes des ports.
  */
-const URL_SERVEUR = process.env.BIBLIO_API_URL ?? 'http://localhost:3000';
+function composerService(): ServiceBibliotheque {
+  const configuration = new StockageConfiguration({
+    cheminFichier: join(app.getPath('userData'), 'configuration.json'),
+    urlEnvironnement: process.env.BIBLIO_API_URL,
+  });
+  const client = new ClientApiHttp({ urlServeur: () => configuration.urlServeur(), delaiMaxMs: 5000 });
+
+  // Assemblage des deux ports (recherche + configuration) en un seul service.
+  return {
+    rechercherExemplaires: (terme) => client.rechercherExemplaires(terme),
+    verifierConnexion: () => client.verifierConnexion(),
+    lireConfiguration: () => configuration.lireConfiguration(),
+    modifierUrlServeur: (url) => configuration.modifierUrlServeur(url),
+  };
+}
 
 function creerFenetre(): BrowserWindow {
   const fenetre = new BrowserWindow({
@@ -29,7 +46,7 @@ function creerFenetre(): BrowserWindow {
 
   fenetre.once('ready-to-show', () => fenetre.show());
 
-  // Liens externes (ex. couverture) ouverts hors de l'application, jamais dans la fenêtre.
+  // Aucune nouvelle fenêtre ne peut être ouverte depuis la page.
   fenetre.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -41,8 +58,7 @@ function creerFenetre(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  const client = new ClientApiHttp({ urlServeur: () => URL_SERVEUR, delaiMaxMs: 5000 });
-  brancherIpc(ipcMain, client);
+  brancherIpc(ipcMain, composerService());
   creerFenetre();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) creerFenetre();

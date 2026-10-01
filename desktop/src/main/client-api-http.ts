@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { schemaErreurApi, schemaListeExemplaires, schemaSante, type Exemplaire } from '../commun/api';
-import { echec, succes, type Resultat, type ServiceBibliotheque } from '../commun/service-bibliotheque';
+import { echec, succes, type Resultat, type ServiceRecherche } from '../commun/service-bibliotheque';
 
 export interface OptionsClientApi {
   /** Lue à chaque requête : un changement d'URL s'applique sans redémarrer. */
@@ -11,11 +11,11 @@ export interface OptionsClientApi {
 }
 
 /**
- * Adapter HTTP du port ServiceBibliotheque, exécuté dans le processus main.
+ * Adapter HTTP du port ServiceRecherche, exécuté dans le processus main.
  * Chaque réponse est validée contre le contrat (schémas zod) : la page ne
  * reçoit jamais de données d'une forme inattendue.
  */
-export class ClientApiHttp implements ServiceBibliotheque {
+export class ClientApiHttp implements ServiceRecherche {
   private readonly fetch: typeof globalThis.fetch;
 
   constructor(private readonly options: OptionsClientApi) {
