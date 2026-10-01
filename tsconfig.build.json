@@ -1,0 +1,11 @@
+{
+  // Build de production : compile uniquement src/ vers dist/.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "sourceMap": true
+  },
+  "include": ["src"]
+}
