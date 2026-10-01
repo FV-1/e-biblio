@@ -672,6 +672,7 @@ textarea:focus-visible {
 
 .segments {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
   border-radius: var(--rayon);
@@ -679,8 +680,9 @@ textarea:focus-visible {
 }
 
 .segment {
-  flex: 1;
+  flex: 1 1 auto;
   padding: 8px 10px;
+  white-space: nowrap;
   background: none;
   color: var(--texte-doux);
   font-weight: 600;
@@ -820,6 +822,133 @@ textarea:focus-visible {
   border-radius: 50%;
   background: var(--succes-fond);
   color: var(--succes);
+}
+
+/* ---------- Téléphone ---------- */
+
+.mode-telephone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.qr-cadre {
+  padding: 10px;
+  border-radius: var(--rayon);
+  background: #ffffff; /* QR code toujours sur fond blanc, même en thème sombre */
+  box-shadow: var(--ombre);
+}
+
+.qr-code {
+  display: block;
+  width: 200px;
+  height: 200px;
+  image-rendering: pixelated;
+}
+
+.consignes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.consignes ol {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.consignes li + li {
+  margin-top: 4px;
+}
+
+.consignes code {
+  overflow-wrap: anywhere;
+}
+
+.consignes > button {
+  align-self: flex-start;
+}
+
+.attente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.point-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulsation 1.4s ease-in-out infinite;
+}
+
+@keyframes pulsation {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .point-pulse {
+    animation: none;
+  }
+}
+
+.mode-telephone-inactif {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.bandeau-telephone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-bottom: 14px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--rayon-petit);
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.bandeau-telephone span {
+  flex: 1;
+}
+
+.succes-ajout .bandeau-telephone {
+  margin-bottom: 18px;
+}
+
+.indicateur-telephone {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-doux);
+  color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .mode-telephone {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
 }
 
 /* ---------- Serveur (pastille + panneau) ---------- */

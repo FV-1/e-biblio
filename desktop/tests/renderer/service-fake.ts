@@ -3,6 +3,7 @@ import {
   echec,
   succes,
   type Configuration,
+  type InfosAppairage,
   type Resultat,
   type ServiceBibliotheque,
 } from '../../src/commun/service-bibliotheque';
@@ -44,6 +45,41 @@ export class ServiceFake implements ServiceBibliotheque {
   ajouterExemplaire(demande: DemandeAjout): Promise<Resultat<ExemplaireAjoute>> {
     this.ajouts.push(demande);
     return this.reponseAjout(demande);
+  }
+
+  // --- Appairage du téléphone ---
+  appairagesDemarres = 0;
+  appairagesArretes = 0;
+  reponseAppairage: () => Promise<Resultat<InfosAppairage>> = async () =>
+    succes({
+      adresses: [
+        { carte: 'Wi-Fi', url: 'http://192.168.1.10:47800/s/jeton/', qrCode: 'data:image/png;base64,QR1' },
+        { carte: 'Ethernet', url: 'http://10.0.0.5:47800/s/jeton/', qrCode: 'data:image/png;base64,QR2' },
+      ],
+    });
+  private readonly abonnesScan = new Set<(isbn: string) => void>();
+
+  demarrerAppairage(): Promise<Resultat<InfosAppairage>> {
+    this.appairagesDemarres += 1;
+    return this.reponseAppairage();
+  }
+
+  async arreterAppairage(): Promise<void> {
+    this.appairagesArretes += 1;
+  }
+
+  surIsbnScanne(rappel: (isbn: string) => void): () => void {
+    this.abonnesScan.add(rappel);
+    return () => this.abonnesScan.delete(rappel);
+  }
+
+  /** Simule un ISBN envoyé par le téléphone (événement main → page). */
+  simulerScan(isbn: string): void {
+    this.abonnesScan.forEach((rappel) => rappel(isbn));
+  }
+
+  get nombreAbonnesScan(): number {
+    return this.abonnesScan.size;
   }
 
   rechercherExemplaires(terme: string): Promise<Resultat<Exemplaire[]>> {

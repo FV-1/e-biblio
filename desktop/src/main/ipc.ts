@@ -1,14 +1,14 @@
 import type { IpcMain } from 'electron';
 import { z } from 'zod';
 import { schemaDemandeAjout } from '../commun/api';
-import { CANAUX_IPC, echec, type ServiceBibliotheque } from '../commun/service-bibliotheque';
+import { CANAUX_IPC, echec, type ServiceInvocable } from '../commun/service-bibliotheque';
 
 /**
  * Adapter entrant du processus main : relaie les appels IPC de la page vers
  * le service. La page est considérée comme NON fiable : chaque argument reçu
  * est validé avant usage.
  */
-export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceBibliotheque): void {
+export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceInvocable): void {
   const invalide = (message: string) => echec({ type: 'requete-invalide', message });
 
   ipc.handle(CANAUX_IPC.rechercherExemplaires, async (_evenement, terme: unknown) => {
@@ -29,6 +29,10 @@ export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceBiblio
     const valide = schemaDemandeAjout.safeParse(demande);
     return valide.success ? service.ajouterExemplaire(valide.data) : invalide('Demande d’ajout invalide');
   });
+
+  ipc.handle(CANAUX_IPC.demarrerAppairage, async () => service.demarrerAppairage());
+
+  ipc.handle(CANAUX_IPC.arreterAppairage, async () => service.arreterAppairage());
 
   ipc.handle(CANAUX_IPC.lireConfiguration, async () => service.lireConfiguration());
 

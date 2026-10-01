@@ -1,23 +1,44 @@
+import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
-import type { ServiceBibliotheque } from '../commun/service-bibliotheque';
+import QRCode from 'qrcode';
+import { CANAUX_IPC, type ServiceInvocable } from '../commun/service-bibliotheque';
+import { AppairageTelephone } from './appairage/appairage-telephone';
+import { chargerRessourcesMobiles } from './appairage/ressources-mobiles';
+import { ServeurAppairage } from './appairage/serveur-appairage';
 import { ClientApiHttp } from './client-api-http';
 import { brancherIpc } from './ipc';
 import { StockageConfiguration } from './stockage-configuration';
+
+/** Port du serveur d'appairage (un port libre est choisi s'il est occupé). */
+const PORT_APPAIRAGE = 47800;
 
 /**
  * Processus main : point d'entrée Electron et composition root du client desktop.
  * Seul endroit qui connaît les implémentations concrètes des ports.
  */
-function composerService(): ServiceBibliotheque {
+function composerService(): { service: ServiceInvocable; arreter: () => Promise<void> } {
   const configuration = new StockageConfiguration({
     cheminFichier: join(app.getPath('userData'), 'configuration.json'),
     urlEnvironnement: process.env.BIBLIO_API_URL,
   });
   const client = new ClientApiHttp({ urlServeur: () => configuration.urlServeur(), delaiMaxMs: 5000 });
 
-  // Assemblage des deux ports (recherche + configuration) en un seul service.
-  return {
+  // Appairage du téléphone : chaque ISBN reçu est poussé vers les fenêtres (IPC main → page).
+  const appairage = new AppairageTelephone({
+    serveur: new ServeurAppairage({
+      ressources: chargerRessourcesMobiles(),
+      portPrefere: PORT_APPAIRAGE,
+      onIsbn: (isbn) => {
+        for (const fenetre of BrowserWindow.getAllWindows()) fenetre.webContents.send(CANAUX_IPC.isbnScanne, isbn);
+      },
+    }),
+    interfacesReseau: () => networkInterfaces(),
+    genererQrCode: (texte) => QRCode.toDataURL(texte, { margin: 1, scale: 8, errorCorrectionLevel: 'M' }),
+  });
+
+  // Assemblage des ports (recherche, configuration, appairage) en un seul service.
+  const service: ServiceInvocable = {
     rechercherExemplaires: (terme) => client.rechercherExemplaires(terme),
     verifierConnexion: () => client.verifierConnexion(),
     listerEmplacements: () => client.listerEmplacements(),
@@ -25,7 +46,10 @@ function composerService(): ServiceBibliotheque {
     ajouterExemplaire: (demande) => client.ajouterExemplaire(demande),
     lireConfiguration: () => configuration.lireConfiguration(),
     modifierUrlServeur: (url) => configuration.modifierUrlServeur(url),
+    demarrerAppairage: () => appairage.demarrer(),
+    arreterAppairage: () => appairage.arreter(),
   };
+  return { service, arreter: () => appairage.arreter() };
 }
 
 function creerFenetre(): BrowserWindow {
@@ -61,11 +85,14 @@ function creerFenetre(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  brancherIpc(ipcMain, composerService());
+  const { service, arreter } = composerService();
+  brancherIpc(ipcMain, service);
   creerFenetre();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) creerFenetre();
   });
+  // Le serveur d'appairage ne survit jamais à l'application.
+  app.on('will-quit', () => void arreter());
 });
 
 app.on('window-all-closed', () => {

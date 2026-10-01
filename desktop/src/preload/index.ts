@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { CANAUX_IPC, type ServiceBibliotheque } from '../commun/service-bibliotheque';
 
 /**
@@ -14,6 +14,18 @@ const service: ServiceBibliotheque = {
   ajouterExemplaire: (demande) => ipcRenderer.invoke(CANAUX_IPC.ajouterExemplaire, demande),
   lireConfiguration: () => ipcRenderer.invoke(CANAUX_IPC.lireConfiguration),
   modifierUrlServeur: (url) => ipcRenderer.invoke(CANAUX_IPC.modifierUrlServeur, url),
+  demarrerAppairage: () => ipcRenderer.invoke(CANAUX_IPC.demarrerAppairage),
+  arreterAppairage: () => ipcRenderer.invoke(CANAUX_IPC.arreterAppairage),
+  surIsbnScanne: (rappel) => {
+    // Seul l'ISBN est transmis à la page, jamais l'objet événement d'Electron.
+    const ecouteur = (_evenement: IpcRendererEvent, isbn: unknown) => {
+      if (typeof isbn === 'string') rappel(isbn);
+    };
+    ipcRenderer.on(CANAUX_IPC.isbnScanne, ecouteur);
+    return () => {
+      ipcRenderer.removeListener(CANAUX_IPC.isbnScanne, ecouteur);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('biblio', service);

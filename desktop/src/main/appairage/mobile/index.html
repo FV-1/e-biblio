@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>e-biblio · Scanner un livre</title>
+    <link rel="stylesheet" href="page.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>e-biblio</h1>
+        <p>Scanner le code-barres d’un livre</p>
+      </header>
+
+      <label class="bouton-photo" for="photo">
+        <span aria-hidden="true">📷</span> Photographier le code-barres
+      </label>
+      <input id="photo" type="file" accept="image/*" capture="environment" />
+      <p class="aide">Cadrez le code-barres au dos du livre, bien à plat et sans reflet.</p>
+
+      <div id="etat" role="status" aria-live="polite" hidden></div>
+
+      <form id="formulaire">
+        <label for="isbn">ou saisir l’ISBN</label>
+        <div class="ligne">
+          <input id="isbn" inputmode="numeric" autocomplete="off" placeholder="978…" />
+          <button type="submit">Envoyer</button>
+        </div>
+      </form>
+
+      <p class="pied">L’ISBN s’affiche aussitôt sur l’ordinateur.</p>
+    </main>
+
+    <script src="zxing.js"></script>
+    <script src="decodeur.js"></script>
+    <script src="page.js"></script>
+  </body>
+</html>

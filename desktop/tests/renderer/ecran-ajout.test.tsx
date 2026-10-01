@@ -5,6 +5,7 @@ import type { Livre, Notice } from '../../src/commun/api';
 import { echec, succes } from '../../src/commun/service-bibliotheque';
 import { EcranAjout } from '../../src/renderer/src/ajout/EcranAjout';
 import { FournisseurService } from '../../src/renderer/src/service/contexte-service';
+import { useAppairage } from '../../src/renderer/src/telephone/use-appairage';
 import { emplacements, exemplaireBienRange } from '../fixtures/exemplaires';
 import { ServiceFake } from './service-fake';
 
@@ -23,10 +24,23 @@ beforeEach(() => {
   service.reponseAjout = async () => succes({ ...exemplaireBienRange, sourceLivre: 'catalogue' });
 });
 
-function afficher(props: { livrePrechoisi?: Livre | null; onVoirDansRecherche?: (t: string) => void } = {}) {
+interface PropsTest {
+  livrePrechoisi?: Livre | null;
+  onVoirDansRecherche?: (t: string) => void;
+}
+
+/** L'écran reçoit sa session téléphone de l'application : on la crée ici de la même façon. */
+function Harnais({ livrePrechoisi, onVoirDansRecherche }: PropsTest) {
+  const appairage = useAppairage(() => undefined);
+  return (
+    <EcranAjout livrePrechoisi={livrePrechoisi ?? null} onVoirDansRecherche={onVoirDansRecherche ?? vi.fn()} appairage={appairage} />
+  );
+}
+
+function afficher(props: PropsTest = {}) {
   render(
     <FournisseurService service={service}>
-      <EcranAjout livrePrechoisi={props.livrePrechoisi ?? null} onVoirDansRecherche={props.onVoirDansRecherche ?? vi.fn()} />
+      <Harnais {...props} />
     </FournisseurService>,
   );
   return userEvent.setup();

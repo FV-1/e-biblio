@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron';
 import { describe, expect, it } from 'vitest';
-import { CANAUX_IPC, succes, type Configuration, type ServiceBibliotheque } from '../../src/commun/service-bibliotheque';
+import { CANAUX_IPC, succes, type Configuration, type ServiceInvocable } from '../../src/commun/service-bibliotheque';
 import { brancherIpc } from '../../src/main/ipc';
 import { exemplaireBienRange } from '../fixtures/exemplaires';
 
@@ -16,7 +16,7 @@ const CONFIGURATION: Configuration = { urlServeur: 'http://x:3000', source: 'def
 
 function serviceEspion() {
   const appels: { methode: string; argument: unknown }[] = [];
-  const service: ServiceBibliotheque = {
+  const service: ServiceInvocable = {
     rechercherExemplaires: async (terme) => {
       appels.push({ methode: 'rechercher', argument: terme });
       return succes([]);
@@ -36,6 +36,13 @@ function serviceEspion() {
       appels.push({ methode: 'modifierUrl', argument: url });
       return succes(CONFIGURATION);
     },
+    demarrerAppairage: async () => {
+      appels.push({ methode: 'demarrerAppairage', argument: undefined });
+      return succes({ adresses: [] });
+    },
+    arreterAppairage: async () => {
+      appels.push({ methode: 'arreterAppairage', argument: undefined });
+    },
   };
   return { service, appels };
 }
@@ -48,8 +55,17 @@ function brancher() {
 }
 
 describe('brancherIpc', () => {
-  it('enregistre un gestionnaire pour chaque canal du contrat', () => {
-    expect(brancher().canaux().sort()).toEqual(Object.values(CANAUX_IPC).sort());
+  it('enregistre un gestionnaire pour chaque canal invocable du contrat', () => {
+    // isbnScanne est un événement main → page : aucun gestionnaire côté main.
+    const invocables = Object.values(CANAUX_IPC).filter((c) => c !== CANAUX_IPC.isbnScanne);
+    expect(brancher().canaux().sort()).toEqual(invocables.sort());
+  });
+
+  it('relaie le démarrage et l’arrêt de l’appairage', async () => {
+    const { appeler, appels } = brancher();
+    expect(await appeler(CANAUX_IPC.demarrerAppairage)).toEqual({ ok: true, valeur: { adresses: [] } });
+    await appeler(CANAUX_IPC.arreterAppairage);
+    expect(appels.map((a) => a.methode)).toEqual(['demarrerAppairage', 'arreterAppairage']);
   });
 
   it('relaie la recherche au service', async () => {

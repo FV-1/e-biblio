@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { DemandeAjout, ExemplaireAjoute, Livre, Notice } from '../../../commun/api';
 import type { ErreurService } from '../../../commun/service-bibliotheque';
 import { CheminLocalisation } from '../recherche/CheminLocalisation';
 import { useService } from '../service/contexte-service';
-import { IconeCodeBarres, IconeCrayon, IconePlus, IconeRecherche, IconeValide } from '../ui/icones';
+import { BandeauTelephone, ModeTelephone } from '../telephone/ModeTelephone';
+import type { Appairage } from '../telephone/use-appairage';
+import { IconeCodeBarres, IconeCrayon, IconePlus, IconeRecherche, IconeTelephone, IconeValide } from '../ui/icones';
 import { ApercuLivre } from './ApercuLivre';
 import { TYPE_RANGEMENT } from './arbre-emplacements';
 import { lireDerniereEtagere, memoriserDerniereEtagere } from './memoire-locale';
@@ -18,7 +20,7 @@ export type LivreChoisi =
   | { readonly type: 'saisie'; readonly notice: NoticeSaisie }
   | { readonly type: 'existant'; readonly livre: Livre };
 
-type Mode = 'isbn' | 'manuel';
+type Mode = 'isbn' | 'telephone' | 'manuel';
 
 type EtatEnvoi =
   | { readonly statut: 'repos' }
@@ -28,26 +30,50 @@ type EtatEnvoi =
 
 const CODES_CATALOGUE = new Set(['LIVRE_INCONNU_DU_CATALOGUE', 'CATALOGUE_INDISPONIBLE']);
 
+/** ISBN reçu du téléphone ; le numéro distingue deux scans successifs du même livre. */
+export interface Scan {
+  readonly isbn: string;
+  readonly numero: number;
+}
+
 interface Props {
   /** Livre déjà enregistré dont on ajoute un exemplaire (depuis la recherche), ou null. */
   readonly livrePrechoisi: Livre | null;
   readonly onVoirDansRecherche: (terme: string) => void;
+  /** Session téléphone, partagée à l'échelle de l'application. */
+  readonly appairage: Appairage;
+  /** Dernier ISBN scanné par le téléphone. */
+  readonly scan?: Scan | null;
 }
 
-export function EcranAjout({ livrePrechoisi, onVoirDansRecherche }: Props) {
+export function EcranAjout({ livrePrechoisi, onVoirDansRecherche, appairage, scan = null }: Props) {
   const service = useService();
   const { etat: etatEmplacements, recharger } = useEmplacements();
   const [mode, setMode] = useState<Mode>('isbn');
   const [isbnPourManuel, setIsbnPourManuel] = useState('');
+  const [isbnScanne, setIsbnScanne] = useState<Scan | null>(null);
   const [livre, setLivre] = useState<LivreChoisi | null>(livrePrechoisi ? { type: 'existant', livre: livrePrechoisi } : null);
   const [etagereId, setEtagereId] = useState<string | null>(() => lireDerniereEtagere());
   const [envoi, setEnvoi] = useState<EtatEnvoi>({ statut: 'repos' });
+
+  // Un nouveau scan remplace le livre en cours et lance la recherche de sa notice.
+  // Le scan déjà présent au montage (traité par une instance précédente) est ignoré.
+  const dernierScanTraite = useRef(scan?.numero ?? 0);
+  useEffect(() => {
+    if (!scan || scan.numero === dernierScanTraite.current) return;
+    dernierScanTraite.current = scan.numero;
+    setLivre(null);
+    setEnvoi({ statut: 'repos' });
+    setIsbnScanne(scan);
+    setMode('isbn');
+  }, [scan]);
 
   const emplacements = etatEmplacements.statut === 'pret' ? etatEmplacements.emplacements : [];
   const etagereValide = emplacements.some((e) => e.id === etagereId && e.type === TYPE_RANGEMENT) ? etagereId : null;
 
   const choisirMode = (nouveau: Mode) => {
     setMode(nouveau);
+    setIsbnScanne(null);
     if (nouveau !== 'manuel') setIsbnPourManuel('');
   };
 
@@ -76,8 +102,9 @@ export function EcranAjout({ livrePrechoisi, onVoirDansRecherche }: Props) {
 
   const recommencer = (prochainLivre: LivreChoisi | null) => {
     setLivre(prochainLivre);
-    setMode('isbn');
+    setMode(appairage.etat.statut === 'actif' ? 'telephone' : 'isbn');
     setIsbnPourManuel('');
+    setIsbnScanne(null);
     setEnvoi({ statut: 'repos' });
   };
 
@@ -85,6 +112,7 @@ export function EcranAjout({ livrePrechoisi, onVoirDansRecherche }: Props) {
     const ex = envoi.exemplaire;
     return (
       <section className="succes-ajout" aria-labelledby="titre-succes">
+        <BandeauTelephone appairage={appairage} />
         <div className="succes-entete">
           <span className="pastille-succes">
             <IconeValide />
@@ -125,6 +153,10 @@ export function EcranAjout({ livrePrechoisi, onVoirDansRecherche }: Props) {
           <span className="numero-etape">1</span> Le livre
         </h2>
 
+        {(livre || mode !== 'telephone') && (
+          <BandeauTelephone appairage={appairage} onAfficherQr={livre ? undefined : () => choisirMode('telephone')} />
+        )}
+
         {livre ? (
           <ApercuLivre {...resumeLivre(livre)} onChanger={() => recommencer(null)} />
         ) : (
@@ -133,14 +165,20 @@ export function EcranAjout({ livrePrechoisi, onVoirDansRecherche }: Props) {
               <BoutonMode actif={mode === 'isbn'} onClick={() => choisirMode('isbn')} icone={<IconeCodeBarres />}>
                 Par ISBN
               </BoutonMode>
+              <BoutonMode actif={mode === 'telephone'} onClick={() => choisirMode('telephone')} icone={<IconeTelephone />}>
+                Avec le téléphone
+              </BoutonMode>
               <BoutonMode actif={mode === 'manuel'} onClick={() => choisirMode('manuel')} icone={<IconeCrayon />}>
                 Saisie manuelle
               </BoutonMode>
             </div>
 
             <div role="tabpanel" className="contenu-mode">
+              {mode === 'telephone' && <ModeTelephone appairage={appairage} />}
               {mode === 'isbn' && (
                 <ModeIsbn
+                  key={isbnScanne?.numero ?? 0}
+                  {...(isbnScanne ? { isbnInitial: isbnScanne.isbn } : {})}
                   onNoticeTrouvee={(notice) => setLivre({ type: 'notice', notice })}
                   onSaisieManuelle={(isbn) => {
                     setIsbnPourManuel(isbn);

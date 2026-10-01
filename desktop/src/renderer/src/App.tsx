@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Livre } from '../../commun/api';
-import { EcranAjout } from './ajout/EcranAjout';
+import { EcranAjout, type Scan } from './ajout/EcranAjout';
 import { ParametresServeur } from './parametres/ParametresServeur';
 import { EcranRecherche } from './recherche/EcranRecherche';
-import { IconeLivres, IconePlus, IconeRecherche } from './ui/icones';
+import { useAppairage } from './telephone/use-appairage';
+import { IconeLivres, IconePlus, IconeRecherche, IconeTelephone } from './ui/icones';
 
 type Onglet = 'recherche' | 'ajout';
 
@@ -13,6 +14,14 @@ export function App() {
   const [ajout, setAjout] = useState<{ livre: Livre | null; numero: number }>({ livre: null, numero: 0 });
   const [requete, setRequete] = useState<{ terme: string; numero: number } | null>(null);
   const [demandeFocus, setDemandeFocus] = useState(0);
+  const [scan, setScan] = useState<Scan | null>(null);
+
+  // La session téléphone vit à l'échelle de l'application : un scan arrive
+  // même si l'utilisateur est sur la recherche, et ouvre alors l'écran d'ajout.
+  const appairage = useAppairage((isbn) => {
+    setScan((s) => ({ isbn, numero: (s?.numero ?? 0) + 1 }));
+    setOnglet('ajout');
+  });
 
   const ouvrirAjout = (livre: Livre | null) => {
     setAjout((a) => ({ livre, numero: a.numero + 1 }));
@@ -53,6 +62,11 @@ export function App() {
               <IconePlus /> Ajouter un livre
             </Onglet>
           </nav>
+          {appairage.etat.statut === 'actif' && (
+            <span className="indicateur-telephone" title="Téléphone connecté comme lecteur de codes-barres">
+              <IconeTelephone /> <span className="visuellement-cache">Téléphone connecté</span>
+            </span>
+          )}
           <ParametresServeur />
         </div>
       </header>
@@ -63,7 +77,13 @@ export function App() {
           <EcranRecherche onAjouterExemplaire={ouvrirAjout} requeteExterne={requete} demandeFocus={demandeFocus} />
         </div>
         <div id="vue-ajout" role="tabpanel" aria-label="Ajouter un livre" hidden={onglet !== 'ajout'}>
-          <EcranAjout key={ajout.numero} livrePrechoisi={ajout.livre} onVoirDansRecherche={voirDansRecherche} />
+          <EcranAjout
+            key={ajout.numero}
+            livrePrechoisi={ajout.livre}
+            onVoirDansRecherche={voirDansRecherche}
+            appairage={appairage}
+            scan={scan}
+          />
         </div>
       </main>
     </div>

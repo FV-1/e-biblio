@@ -45,13 +45,41 @@ export interface ServiceConfiguration {
   modifierUrlServeur(url: string | null): Promise<Resultat<Configuration>>;
 }
 
+/** Une adresse réseau du poste à laquelle le téléphone peut se connecter. */
+export interface AdresseAppairage {
+  /** Nom de la carte réseau (ex. « Wi-Fi »), pour aider à choisir. */
+  readonly carte: string;
+  readonly url: string;
+  /** QR code de l'URL, en image PNG (data URL). */
+  readonly qrCode: string;
+}
+
+export interface InfosAppairage {
+  /** Adresses possibles, la plus probable en premier. */
+  readonly adresses: readonly AdresseAppairage[];
+}
+
+/** Appairage d'un téléphone servant de lecteur de codes-barres (implémenté par le main). */
+export interface ServiceAppairage {
+  demarrerAppairage(): Promise<Resultat<InfosAppairage>>;
+  arreterAppairage(): Promise<void>;
+  /** Abonnement aux ISBN envoyés par le téléphone ; renvoie la fonction de désabonnement. */
+  surIsbnScanne(rappel: (isbn: string) => void): () => void;
+}
+
 /**
  * PORT complet du client desktop : tout ce dont l'interface a besoin.
- * Composé de deux ports plus petits (ségrégation des interfaces), assemblés
- * dans le processus main ; ré-exposé à la page par le preload via IPC ;
- * remplacé par un fake dans les tests des composants React.
+ * Composé de ports plus petits (ségrégation des interfaces), assemblés dans le
+ * processus main ; ré-exposé à la page par le preload via IPC ; remplacé par
+ * un fake dans les tests des composants React.
  */
-export interface ServiceBibliotheque extends ServiceRecherche, ServiceConfiguration {}
+export interface ServiceBibliotheque extends ServiceRecherche, ServiceConfiguration, ServiceAppairage {}
+
+/**
+ * Partie du port appelable par requête/réponse IPC. L'abonnement aux scans
+ * (`surIsbnScanne`) circule dans l'autre sens : main → page, par événement.
+ */
+export type ServiceInvocable = Omit<ServiceBibliotheque, 'surIsbnScanne'>;
 
 /** Noms des canaux IPC, partagés par le main (qui écoute) et le preload (qui appelle). */
 export const CANAUX_IPC = {
@@ -62,4 +90,8 @@ export const CANAUX_IPC = {
   ajouterExemplaire: 'biblio:ajouter-exemplaire',
   lireConfiguration: 'biblio:lire-configuration',
   modifierUrlServeur: 'biblio:modifier-url-serveur',
+  demarrerAppairage: 'biblio:demarrer-appairage',
+  arreterAppairage: 'biblio:arreter-appairage',
+  /** Événement main → page : un ISBN vient d'être scanné par le téléphone. */
+  isbnScanne: 'biblio:isbn-scanne',
 } as const;
