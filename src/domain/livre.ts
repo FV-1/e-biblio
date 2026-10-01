@@ -43,15 +43,25 @@ export class Livre {
   correspond(terme: string): boolean {
     const t = normaliserPourRecherche(terme);
     if (t.length === 0) return false;
-    const termeIsbn = t.replace(/[\s-]/g, '');
+    const termeIsbn = formeIsbnRecherchee(t);
     return (
       normaliserPourRecherche(this.titre).includes(t) ||
       this.auteurs.some((a) => normaliserPourRecherche(a).includes(t)) ||
-      (termeIsbn.length > 0 && this.isbn.valeur.toLowerCase().includes(termeIsbn))
+      (termeIsbn.length > 0 && this.isbn.valeur.includes(termeIsbn))
     );
   }
 
   versSnapshot(): LivreSnapshot {
     return { isbn: this.isbn.valeur, titre: this.titre, auteurs: [...this.auteurs], couverture: this.couverture };
   }
+}
+
+/**
+ * Forme sous laquelle un terme (déjà normalisé) est cherché dans l'ISBN :
+ * un ISBN complet valide (10 ou 13) est converti en ISBN-13, sinon on retire
+ * simplement tirets et espaces pour permettre une recherche partielle.
+ * Exportée pour que les adapters de persistance appliquent la même règle.
+ */
+export function formeIsbnRecherchee(termeNormalise: string): string {
+  return Isbn.essayer(termeNormalise)?.valeur ?? termeNormalise.replace(/[\s-]/g, '');
 }

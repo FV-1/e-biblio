@@ -28,6 +28,15 @@ export class Isbn {
     throw isbnInvalide(brut, 'format attendu : 10 ou 13 caractères');
   }
 
+  /** Variante sans exception : null si la chaîne n'est pas un ISBN valide. */
+  static essayer(brut: string): Isbn | null {
+    try {
+      return Isbn.creer(brut);
+    } catch {
+      return null;
+    }
+  }
+
   egale(autre: Isbn): boolean {
     return this.valeur === autre.valeur;
   }

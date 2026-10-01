@@ -1,0 +1,73 @@
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import Database from 'better-sqlite3';
+
+export type BaseSqlite = Database.Database;
+
+/**
+ * Migrations successives du schéma. L'indice + 1 correspond à `PRAGMA user_version` :
+ * on n'applique que celles qui ne l'ont pas encore été. Ne jamais modifier une
+ * migration existante, toujours en ajouter une nouvelle.
+ */
+const MIGRATIONS: readonly string[] = [
+  `
+  CREATE TABLE emplacements (
+    id        TEXT PRIMARY KEY,
+    type      TEXT NOT NULL CHECK (type IN ('etage', 'salle', 'rayon', 'etagere', 'niveau')),
+    nom       TEXT NOT NULL,
+    parent_id TEXT REFERENCES emplacements (id),
+    x         REAL,
+    y         REAL,
+    CHECK ((x IS NULL) = (y IS NULL))
+  );
+  CREATE INDEX idx_emplacements_parent ON emplacements (parent_id);
+
+  CREATE TABLE livres (
+    isbn            TEXT PRIMARY KEY,
+    titre           TEXT NOT NULL,
+    auteurs         TEXT NOT NULL,          -- tableau JSON
+    couverture      TEXT,
+    texte_recherche TEXT NOT NULL           -- titre et auteurs normalisés (cf. normaliserPourRecherche)
+  );
+
+  CREATE TABLE exemplaires (
+    id                       TEXT PRIMARY KEY,
+    isbn                     TEXT NOT NULL REFERENCES livres (isbn),
+    emplacement_id           TEXT NOT NULL REFERENCES emplacements (id),
+    detection_emplacement_id TEXT REFERENCES emplacements (id),
+    detection_date           TEXT,          -- ISO 8601
+    CHECK ((detection_emplacement_id IS NULL) = (detection_date IS NULL))
+  );
+  CREATE INDEX idx_exemplaires_isbn ON exemplaires (isbn);
+  CREATE INDEX idx_exemplaires_emplacement ON exemplaires (emplacement_id);
+  CREATE INDEX idx_exemplaires_detection ON exemplaires (detection_emplacement_id);
+  `,
+];
+
+/** Ouvre (ou crée) la base, active les clés étrangères et applique les migrations. */
+export function ouvrirBaseSqlite(chemin: string): BaseSqlite {
+  if (chemin !== ':memory:') mkdirSync(dirname(chemin), { recursive: true });
+
+  const db = new Database(chemin);
+  db.pragma('foreign_keys = ON');
+  if (chemin !== ':memory:') db.pragma('journal_mode = WAL');
+  migrer(db);
+  return db;
+}
+
+function migrer(db: BaseSqlite): void {
+  const versionActuelle = db.pragma('user_version', { simple: true }) as number;
+  MIGRATIONS.slice(versionActuelle).forEach((sql, i) => {
+    db.transaction(() => {
+      db.exec(sql);
+      db.pragma(`user_version = ${versionActuelle + i + 1}`);
+    })();
+  });
+}
+
+/** Vide toutes les tables (utilisé par le seed). */
+export function viderBase(db: BaseSqlite): void {
+  db.transaction(() => {
+    db.exec('DELETE FROM exemplaires; DELETE FROM livres; DELETE FROM emplacements;');
+  })();
+}

@@ -2,8 +2,8 @@
   // Configuration de base : utilisée par l'éditeur et `npm run typecheck`
   // (couvre src + tests). Le build passe par tsconfig.build.json.
   "compilerOptions": {
-    "target": "ES2023",
-    "lib": ["ES2023"],
+    "target": "ES2024",
+    "lib": ["ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"],

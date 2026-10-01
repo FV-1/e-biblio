@@ -31,6 +31,7 @@ describe('Livre', () => {
       ['hugo', 'auteur'],
       ['978030640', 'début d’ISBN'],
       ['978-0-306', 'ISBN avec tirets'],
+      ['0-306-40615-2', 'ISBN-10 complet (converti en ISBN-13)'],
     ])('trouve « %s » (%s)', (terme) => {
       expect(livre().correspond(terme)).toBe(true);
     });
