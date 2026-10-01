@@ -76,6 +76,11 @@ L'adresse du serveur se règle de trois façons, par ordre de priorité :
 ### 3. Utiliser l'application
 
 - **Rechercher** (`Ctrl+K`) : les résultats s'affichent pendant la frappe (titre, auteur ou ISBN, sans tenir compte des accents). Les filtres permettent d'isoler les exemplaires mal rangés ou jamais détectés. Chaque carte propose d'**ajouter un exemplaire** du même livre.
+- **Base de données** : un tableau de **toutes les œuvres** de la bibliothèque.
+  - Colonnes : couverture, titre, auteurs, ISBN, nombre d'exemplaires et nombre d'exemplaires mal rangés.
+  - Filtre texte, filtres « avec / sans ISBN » et « avec / sans couverture » (pratique pour repérer les notices à compléter).
+  - Tri en cliquant sur les en-têtes, pagination par 25, 50 ou 100.
+  - Un clic sur une ligne la **déplie** pour afficher chaque exemplaire, sa localisation et l'endroit où il a été vu s'il est mal rangé.
 - **Ajouter un livre**, de trois façons :
   1. **Par ISBN** : la notice (titre, auteurs, couverture) est affichée pour vérification avant l'ajout. Si l'ISBN est inconnu ou si Open Library ne répond pas, un bouton bascule vers la saisie manuelle en conservant l'ISBN.
   2. **Avec le téléphone** : l'application affiche un QR code. Scannez-le avec l'appareil photo du téléphone, puis photographiez le code-barres du livre ; la notice s'affiche aussitôt sur l'ordinateur. Il n'y a rien à installer sur le téléphone, et la session reste active pour scanner plusieurs livres à la suite.
@@ -107,9 +112,26 @@ Toutes les requêtes et réponses sont au format JSON. Le fichier [`requests.htt
 | `POST` | `/exemplaires` | Ajoute un exemplaire : par ISBN (Open Library), par saisie manuelle (ISBN facultatif) ou pour un livre existant (`livreId`) | 201 |
 | `GET` | `/livres/:isbn` | Aperçu de la notice d'un ISBN (base ou Open Library), **sans rien enregistrer** | 200 |
 | `GET` | `/exemplaires?q=…` | Recherche par titre, auteur ou ISBN, avec la localisation complète | 200 |
+| `GET` | `/exemplaires?livreId=…` | Tous les exemplaires d'une œuvre, avec leur localisation | 200 |
+| `GET` | `/livres` | Toutes les œuvres, avec leurs compteurs (vue « base de données »), voir les paramètres ci-dessous | 200 |
 | `GET` | `/exemplaires/mal-ranges` | Exemplaires dont la position constatée diffère de la position théorique | 200 |
 | `GET` | `/exemplaires/:id` | Détail et localisation d'un exemplaire | 200 |
 | `POST` | `/detections` | Enregistre un scan et publie l'événement `ExemplaireDetecte` | 201 |
+
+### Paramètres de `GET /livres`
+
+Tous les paramètres sont facultatifs :
+
+| Paramètre | Valeurs | Défaut |
+|---|---|---|
+| `q` | Texte cherché dans le titre, les auteurs ou l'ISBN | aucun filtre |
+| `isbn` | `avec` ou `sans` | toutes les œuvres |
+| `couverture` | `avec` ou `sans` | toutes les œuvres |
+| `tri` | `titre`, `auteur`, `exemplaires`, `malRanges` | `titre` |
+| `ordre` | `asc` ou `desc` | `asc` |
+| `page`, `parPage` | page à partir de 1 ; de 1 à 100 œuvres par page | `1`, `25` |
+
+Réponse : `{ "livres": [...], "total": 132, "page": 1, "parPage": 25, "pages": 6 }`. Chaque œuvre contient sa notice plus `nombreExemplaires` et `nombreMalRanges`. Les œuvres sans exemplaire sont incluses.
 
 ### Corps des requêtes
 
@@ -174,7 +196,7 @@ src/
 ├── domain/        Entités et règles métier pures : Isbn, Emplacement, Livre, Exemplaire,
 │                  calcul de localisation, événement ExemplaireDetecte. Aucune dépendance externe.
 ├── ports/         Interfaces : EmplacementRepository, ExemplaireRepository, LivreRepository,
-│                  CatalogueExterne, EventPublisher, Horloge, GenerateurId
+│                  InventaireLivres (lecture), CatalogueExterne, EventPublisher, Horloge, GenerateurId
 ├── application/   Cas d'usage (une classe par cas) qui renvoient des « vues » sérialisables
 ├── adapters/
 │   ├── persistence/   SQLite : migrations versionnées, repositories
@@ -198,6 +220,11 @@ Principaux choix :
 - **Le catalogue externe renvoie un résultat explicite** (`trouve`, `introuvable` ou `indisponible`) au lieu de lever une exception. La panne d'Open Library est ainsi traitée comme un cas normal.
 - **Une seule règle de recherche.** Insensibilité à la casse et aux accents, recherche par ISBN-10 : tout est défini dans le domaine. L'adapter SQLite réutilise les mêmes fonctions, via une colonne de recherche normalisée.
 - **`Horloge` et `GenerateurId` sont des ports**, ce qui rend les tests déterministes.
+- **Lecture et écriture séparées pour la vue « base de données »** (principe CQRS) :
+  - Les repositories servent à charger et enregistrer des entités.
+  - Le port `InventaireLivres` est un **modèle de lecture** : il liste, filtre, trie, pagine et compte en une seule requête SQL agrégée.
+  - La règle « mal rangé » y est traduite en SQL. Un test de contrat vérifie qu'elle donne les mêmes résultats que `Exemplaire.estMalRange` du domaine.
+- **Migrations versionnées** : soit du SQL, soit une fonction quand des données doivent être recalculées. Par exemple, la migration v3 remplit les clés de tri avec la règle de normalisation du domaine.
 
 ### Client desktop : même principe, côté interface
 
@@ -210,6 +237,7 @@ desktop/src/
 ├── preload/    Pont sécurisé : expose window.biblio, qui relaie chaque appel au processus main par IPC
 └── renderer/   React : les composants ne dépendent que du port, fourni par un contexte React
     ├── recherche/  Écran de recherche, cartes, filtres
+    ├── base/       Vue « base de données » : tableau des œuvres, tri, pagination
     ├── ajout/      Écran d'ajout : ISBN, saisie manuelle, choix de l'étagère
     └── telephone/  Session d'appairage, QR code
 ```
@@ -260,4 +288,4 @@ npm run typecheck
 
 ## Hors périmètre de cette version
 
-Côté client mobile autonome, temps réel (WebSocket), prêts, réservations et comptes utilisateurs. Le client desktop couvre la recherche, la localisation et l'ajout de livres. L'API permet déjà la gestion des emplacements, la liste des exemplaires mal rangés et l'enregistrement des détections : ces écrans pourront être ajoutés au client sans modifier le serveur.
+Côté client mobile autonome, temps réel (WebSocket), prêts, réservations et comptes utilisateurs. Le client desktop couvre la recherche, la localisation, la consultation du fonds (base de données) et l'ajout de livres. L'API permet déjà la gestion des emplacements, la liste des exemplaires mal rangés et l'enregistrement des détections : ces écrans pourront être ajoutés au client sans modifier le serveur.
