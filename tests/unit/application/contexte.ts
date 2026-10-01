@@ -7,6 +7,7 @@ import { EventPublisherEspion } from '../../fakes/event-publisher-espion.js';
 import { ExemplaireRepositoryEnMemoire } from '../../fakes/exemplaire-repository-en-memoire.js';
 import { GenerateurIdSequentiel } from '../../fakes/generateur-id-sequentiel.js';
 import { HorlogeFixe } from '../../fakes/horloge-fixe.js';
+import { InventaireLivresEnMemoire } from '../../fakes/inventaire-livres-en-memoire.js';
 import { LivreRepositoryEnMemoire } from '../../fakes/livre-repository-en-memoire.js';
 import { construireHierarchie } from '../../fixtures/hierarchie.js';
 
@@ -28,11 +29,13 @@ export const hugo = Livre.creer({
 export function creerContexte() {
   const hierarchie = construireHierarchie();
   const livres = new LivreRepositoryEnMemoire([hugo]);
+  const exemplaires = new ExemplaireRepositoryEnMemoire(livres);
   return {
     hierarchie,
     emplacements: new EmplacementRepositoryEnMemoire(hierarchie.tous),
     livres,
-    exemplaires: new ExemplaireRepositoryEnMemoire(livres),
+    exemplaires,
+    inventaire: new InventaireLivresEnMemoire(livres, exemplaires),
     catalogue: new CatalogueExterneFake(),
     publisher: new EventPublisherEspion(),
     horloge: new HorlogeFixe(),

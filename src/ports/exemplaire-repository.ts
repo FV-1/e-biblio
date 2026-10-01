@@ -16,6 +16,8 @@ export interface ExemplaireRepository {
    * pour la performance ; la règle de référence reste Exemplaire.estMalRange.
    */
   trouverMalRanges(): Promise<Exemplaire[]>;
+  /** Exemplaires d'un livre, dans l'ordre de leur identifiant. */
+  trouverParLivre(livreId: string): Promise<Exemplaire[]>;
   /** Vrai si au moins un exemplaire y est rangé ou y a été détecté en dernier. */
   existeAvecEmplacement(emplacementId: string): Promise<boolean>;
 }

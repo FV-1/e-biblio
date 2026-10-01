@@ -207,6 +207,21 @@ GET {{baseUrl}}/exemplaires?q=978-0-306
 ### Détail d'un exemplaire
 GET {{baseUrl}}/exemplaires/{{ajoutManuel.response.body.id}}
 
+### Vue « base de données » : toutes les œuvres (tri par titre, 25 par page)
+GET {{baseUrl}}/livres
+
+### Œuvres sans ISBN ni couverture (notices à compléter), triées par auteur
+GET {{baseUrl}}/livres?isbn=sans&couverture=sans&tri=auteur
+
+### Recherche + tri par nombre d'exemplaires mal rangés, 10 par page, page 1
+GET {{baseUrl}}/livres?q=hugo&tri=malRanges&ordre=desc&parPage=10&page=1
+
+### Exemplaires d'une œuvre (ligne dépliée de la vue « base de données »)
+GET {{baseUrl}}/exemplaires?livreId={{ajoutManuel.response.body.livreId}}
+
+### [Erreur 400] Tri inconnu
+GET {{baseUrl}}/livres?tri=pirate
+
 ### [Erreur 400] Recherche sans terme
 GET {{baseUrl}}/exemplaires?q=
 

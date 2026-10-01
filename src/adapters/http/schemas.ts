@@ -64,7 +64,28 @@ export const corpsAjouterExemplaire = z
 
 export const parametresIsbn = z.object({ isbn: z.string().trim().min(1).max(30) });
 
-export const requeteRecherche = z.object({ q: z.string().trim().min(1, 'Le paramètre « q » est obligatoire').max(200) });
+/** GET /exemplaires : recherche (q) OU exemplaires d'une œuvre (livreId), l'un des deux exactement. */
+export const requeteExemplaires = z.union(
+  [
+    // `z.undefined().optional()` : avec zod 4, `z.undefined()` seul rendrait la clé obligatoire.
+    z.object({ q: z.string().trim().min(1, 'Le paramètre « q » est obligatoire').max(200), livreId: z.undefined().optional() }),
+    z.object({ livreId: identifiant, q: z.undefined().optional() }),
+  ],
+  { error: 'Indiquez soit « q » (recherche), soit « livreId » (exemplaires d’une œuvre)' },
+);
+
+const avecOuSans = z.enum(['avec', 'sans']).transform((v) => v === 'avec');
+
+/** GET /livres : vue « base de données » (recherche, filtres, tri, pagination). */
+export const requeteLivres = z.object({
+  q: z.string().trim().max(200).optional(),
+  isbn: avecOuSans.optional(),
+  couverture: avecOuSans.optional(),
+  tri: z.enum(['titre', 'auteur', 'exemplaires', 'malRanges']).optional(),
+  ordre: z.enum(['asc', 'desc']).optional(),
+  page: z.coerce.number().int().min(1).max(100_000).optional(),
+  parPage: z.coerce.number().int().min(1).max(100).optional(),
+});
 
 export const corpsDetection = z.strictObject({
   exemplaireId: identifiant,

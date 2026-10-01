@@ -1,5 +1,5 @@
 import type { Isbn } from '../../domain/isbn.js';
-import { Livre } from '../../domain/livre.js';
+import { cleTriAuteur, cleTriTitre, Livre } from '../../domain/livre.js';
 import { normaliserPourRecherche } from '../../domain/texte.js';
 import type { LivreRepository } from '../../ports/livre-repository.js';
 import type { BaseSqlite } from './connexion.js';
@@ -31,12 +31,13 @@ export class SqliteLivreRepository implements LivreRepository {
     this.requetes = {
       parId: db.prepare<[string], LigneLivre>(`SELECT ${COLONNES} FROM livres WHERE id = ?`),
       parIsbn: db.prepare<[string], LigneLivre>(`SELECT ${COLONNES} FROM livres WHERE isbn = ?`),
-      upsert: db.prepare<[LigneLivre & { texte_recherche: string }]>(`
-        INSERT INTO livres (id, isbn, titre, auteurs, couverture, texte_recherche)
-        VALUES (@id, @isbn, @titre, @auteurs, @couverture, @texte_recherche)
+      upsert: db.prepare<[LigneLivre & { texte_recherche: string; titre_tri: string; auteur_tri: string }]>(`
+        INSERT INTO livres (id, isbn, titre, auteurs, couverture, texte_recherche, titre_tri, auteur_tri)
+        VALUES (@id, @isbn, @titre, @auteurs, @couverture, @texte_recherche, @titre_tri, @auteur_tri)
         ON CONFLICT (id) DO UPDATE SET
           isbn = excluded.isbn, titre = excluded.titre, auteurs = excluded.auteurs,
-          couverture = excluded.couverture, texte_recherche = excluded.texte_recherche
+          couverture = excluded.couverture, texte_recherche = excluded.texte_recherche,
+          titre_tri = excluded.titre_tri, auteur_tri = excluded.auteur_tri
       `),
     };
   }
@@ -60,6 +61,8 @@ export class SqliteLivreRepository implements LivreRepository {
       auteurs: JSON.stringify(s.auteurs),
       couverture: s.couverture,
       texte_recherche: texteRecherche(livre),
+      titre_tri: cleTriTitre(livre),
+      auteur_tri: cleTriAuteur(livre),
     });
   }
 }

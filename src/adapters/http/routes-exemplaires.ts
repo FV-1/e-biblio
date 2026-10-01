@@ -3,11 +3,13 @@ import type { AjouterExemplaire, LivreAAjouter } from '../../application/exempla
 import type { ConsulterExemplaire } from '../../application/exemplaires/consulter-exemplaire.js';
 import type { ListerExemplairesMalRanges } from '../../application/exemplaires/lister-exemplaires-mal-ranges.js';
 import type { RechercherExemplaires } from '../../application/exemplaires/rechercher-exemplaires.js';
-import { corpsAjouterExemplaire, parametresId, requeteRecherche } from './schemas.js';
+import type { ListerExemplairesDuLivre } from '../../application/exemplaires/lister-exemplaires-du-livre.js';
+import { corpsAjouterExemplaire, parametresId, requeteExemplaires } from './schemas.js';
 
 export interface CasUsageExemplaires {
   ajouter: AjouterExemplaire;
   rechercher: RechercherExemplaires;
+  listerDuLivre: ListerExemplairesDuLivre;
   consulter: ConsulterExemplaire;
   listerMalRanges: ListerExemplairesMalRanges;
 }
@@ -16,8 +18,12 @@ export function routesExemplaires(cas: CasUsageExemplaires): Router {
   const router = Router();
 
   router.get('/', async (req, res) => {
-    const { q } = requeteRecherche.parse(req.query);
-    res.json(await cas.rechercher.executer(q));
+    const requete = requeteExemplaires.parse(req.query);
+    res.json(
+      requete.livreId !== undefined
+        ? await cas.listerDuLivre.executer(requete.livreId)
+        : await cas.rechercher.executer(requete.q),
+    );
   });
 
   // Déclarée avant /:id, sinon « mal-ranges » serait pris pour un identifiant.

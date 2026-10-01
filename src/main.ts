@@ -4,6 +4,7 @@ import { OpenLibraryCatalogue } from './adapters/isbn/open-library-catalogue.js'
 import { ouvrirBaseSqlite } from './adapters/persistence/connexion.js';
 import { SqliteEmplacementRepository } from './adapters/persistence/sqlite-emplacement-repository.js';
 import { SqliteExemplaireRepository } from './adapters/persistence/sqlite-exemplaire-repository.js';
+import { SqliteInventaireLivres } from './adapters/persistence/sqlite-inventaire-livres.js';
 import { SqliteLivreRepository } from './adapters/persistence/sqlite-livre-repository.js';
 import { GenerateurUuid } from './adapters/systeme/generateur-uuid.js';
 import { HorlogeSysteme } from './adapters/systeme/horloge-systeme.js';
@@ -17,7 +18,9 @@ import { AjouterExemplaire } from './application/exemplaires/ajouter-exemplaire.
 import { ConsulterExemplaire } from './application/exemplaires/consulter-exemplaire.js';
 import { ListerExemplairesMalRanges } from './application/exemplaires/lister-exemplaires-mal-ranges.js';
 import { RechercherExemplaires } from './application/exemplaires/rechercher-exemplaires.js';
+import { ListerExemplairesDuLivre } from './application/exemplaires/lister-exemplaires-du-livre.js';
 import { ConsulterNotice } from './application/livres/consulter-notice.js';
+import { ListerLivres } from './application/livres/lister-livres.js';
 import { chargerConfig } from './config.js';
 
 /**
@@ -33,6 +36,7 @@ function main(): void {
   const emplacements = new SqliteEmplacementRepository(db);
   const livres = new SqliteLivreRepository(db);
   const exemplaires = new SqliteExemplaireRepository(db);
+  const inventaire = new SqliteInventaireLivres(db); // modèle de lecture (vue « base de données »)
   const catalogue = new OpenLibraryCatalogue({
     urlBase: config.OPEN_LIBRARY_URL,
     delaiMaxMs: config.OPEN_LIBRARY_TIMEOUT_MS,
@@ -55,9 +59,11 @@ function main(): void {
       rechercher: new RechercherExemplaires(exemplaires, livres, emplacements),
       consulter: new ConsulterExemplaire(exemplaires, livres, emplacements),
       listerMalRanges: new ListerExemplairesMalRanges(exemplaires, livres, emplacements),
+      listerDuLivre: new ListerExemplairesDuLivre(exemplaires, livres, emplacements),
     },
     livres: {
       consulterNotice: new ConsulterNotice(livres, catalogue),
+      lister: new ListerLivres(inventaire),
     },
     detections: {
       enregistrer: new EnregistrerDetection(exemplaires, livres, emplacements, publisher, horloge),

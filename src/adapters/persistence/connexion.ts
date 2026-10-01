@@ -1,15 +1,17 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
+import { cleTriAuteur, cleTriTitre, Livre } from '../../domain/livre.js';
 
 export type BaseSqlite = Database.Database;
 
 /**
  * Migrations successives du schéma. L'indice + 1 correspond à `PRAGMA user_version` :
  * on n'applique que celles qui ne l'ont pas encore été. Ne jamais modifier une
- * migration existante, toujours en ajouter une nouvelle.
+ * migration existante, toujours en ajouter une nouvelle. Une migration est du
+ * SQL, ou une fonction quand elle a besoin de code (remplissage de données).
  */
-const MIGRATIONS: readonly string[] = [
+const MIGRATIONS: readonly (string | ((db: BaseSqlite) => void))[] = [
   `
   CREATE TABLE emplacements (
     id        TEXT PRIMARY KEY,
@@ -76,7 +78,34 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX idx_exemplaires_emplacement ON exemplaires (emplacement_id);
   CREATE INDEX idx_exemplaires_detection ON exemplaires (detection_emplacement_id);
   `,
+  // v3 : clés de tri (titre, premier auteur) normalisées par le domaine, pour la
+  // vue « base de données ». Le remplissage des lignes existantes a besoin de la
+  // fonction du domaine : cette migration est donc une fonction, pas du SQL pur.
+  (db) => {
+    db.exec(`
+      ALTER TABLE livres ADD COLUMN titre_tri TEXT NOT NULL DEFAULT '';
+      ALTER TABLE livres ADD COLUMN auteur_tri TEXT NOT NULL DEFAULT '';
+      CREATE INDEX idx_livres_titre_tri ON livres (titre_tri);
+      CREATE INDEX idx_livres_auteur_tri ON livres (auteur_tri);
+    `);
+    const lignes = db.prepare<[], LivreSnapshotSql>('SELECT id, isbn, titre, auteurs, couverture FROM livres').all();
+    const maj = db.prepare<[{ id: string; titre_tri: string; auteur_tri: string }]>(
+      'UPDATE livres SET titre_tri = @titre_tri, auteur_tri = @auteur_tri WHERE id = @id',
+    );
+    for (const l of lignes) {
+      const livre = Livre.reconstituer({ ...l, auteurs: JSON.parse(l.auteurs) as string[] });
+      maj.run({ id: l.id, titre_tri: cleTriTitre(livre), auteur_tri: cleTriAuteur(livre) });
+    }
+  },
 ];
+
+interface LivreSnapshotSql {
+  id: string;
+  isbn: string | null;
+  titre: string;
+  auteurs: string;
+  couverture: string | null;
+}
 
 /** Nombre de migrations : version du schéma attendue (exporté pour les tests). */
 export const VERSION_SCHEMA = MIGRATIONS.length;
@@ -84,9 +113,10 @@ export const VERSION_SCHEMA = MIGRATIONS.length;
 /** Applique les migrations jusqu'à `version` incluse (toutes par défaut). Exporté pour les tests. */
 export function migrer(db: BaseSqlite, version = VERSION_SCHEMA): void {
   const versionActuelle = db.pragma('user_version', { simple: true }) as number;
-  MIGRATIONS.slice(versionActuelle, version).forEach((sql, i) => {
+  MIGRATIONS.slice(versionActuelle, version).forEach((migration, i) => {
     db.transaction(() => {
-      db.exec(sql);
+      if (typeof migration === 'string') db.exec(migration);
+      else migration(db);
       db.pragma(`user_version = ${versionActuelle + i + 1}`);
     })();
   });

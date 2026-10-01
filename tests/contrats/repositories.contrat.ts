@@ -5,6 +5,7 @@ import { Isbn } from '../../src/domain/isbn.js';
 import { Livre } from '../../src/domain/livre.js';
 import type { EmplacementRepository } from '../../src/ports/emplacement-repository.js';
 import type { ExemplaireRepository } from '../../src/ports/exemplaire-repository.js';
+import type { CriteresLivres, InventaireLivres } from '../../src/ports/inventaire-livres.js';
 import type { LivreRepository } from '../../src/ports/livre-repository.js';
 import { construireHierarchie } from '../fixtures/hierarchie.js';
 
@@ -18,6 +19,7 @@ export interface Repositories {
   emplacements: EmplacementRepository;
   livres: LivreRepository;
   exemplaires: ExemplaireRepository;
+  inventaire: InventaireLivres;
 }
 
 const ISBN_HUGO = Isbn.creer('9780306406157');
@@ -177,6 +179,84 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
         expect(await repos.exemplaires.existeAvecEmplacement('etagere-r1')).toBe(true);
         expect(await repos.exemplaires.existeAvecEmplacement('etagere-r2')).toBe(true);
         expect(await repos.exemplaires.existeAvecEmplacement('rayon-romans')).toBe(false);
+      });
+
+      it('trouverParLivre renvoie les exemplaires d’un livre, triés par id', async () => {
+        expect((await repos.exemplaires.trouverParLivre('livre-hugo')).map((e) => e.id)).toEqual(['ex-bien', 'ex-mal']);
+        expect(await repos.exemplaires.trouverParLivre('livre-inconnu')).toEqual([]);
+      });
+
+      describe('InventaireLivres (modèle de lecture)', () => {
+        beforeEach(async () => {
+          await repos.livres.enregistrer(archives); // aucun exemplaire, aucun auteur
+        });
+
+        const lister = async (criteres: Partial<CriteresLivres> = {}) => {
+          const page = await repos.inventaire.lister({ tri: 'titre', ordre: 'asc', page: 1, parPage: 50, ...criteres });
+          return { ...page, titres: page.lignes.map((l) => l.livre.titre) };
+        };
+
+        it('liste toutes les œuvres, y compris sans exemplaire, avec leurs compteurs', async () => {
+          const { lignes, total } = await lister();
+          expect(total).toBe(4);
+          expect(lignes.map((l) => [l.livre.titre, l.nombreExemplaires, l.nombreMalRanges])).toEqual([
+            ['Archives municipales', 0, 0],
+            ['Germinal', 1, 0],
+            ['Les Misérables', 2, 1],
+            ['Registre paroissial 1789', 1, 0],
+          ]);
+          expect(lignes[2]?.livre.versSnapshot()).toEqual(hugo.versSnapshot());
+        });
+
+        it.each([
+          [{ tri: 'titre', ordre: 'desc' }, ['Registre paroissial 1789', 'Les Misérables', 'Germinal', 'Archives municipales']],
+          // Tri sur le premier auteur, sans accents (« Émile » avec les E), livres sans auteur en dernier.
+          [{ tri: 'auteur', ordre: 'asc' }, ['Registre paroissial 1789', 'Germinal', 'Les Misérables', 'Archives municipales']],
+          [{ tri: 'auteur', ordre: 'desc' }, ['Les Misérables', 'Germinal', 'Registre paroissial 1789', 'Archives municipales']],
+          [{ tri: 'exemplaires', ordre: 'desc' }, ['Les Misérables', 'Germinal', 'Registre paroissial 1789', 'Archives municipales']],
+          [{ tri: 'exemplaires', ordre: 'asc' }, ['Archives municipales', 'Germinal', 'Registre paroissial 1789', 'Les Misérables']],
+          [{ tri: 'malRanges', ordre: 'desc' }, ['Les Misérables', 'Archives municipales', 'Germinal', 'Registre paroissial 1789']],
+        ] as const)('trie selon %j', async (criteres, attendus) => {
+          expect((await lister(criteres)).titres).toEqual(attendus);
+        });
+
+        it.each([
+          [{ avecIsbn: true }, ['Germinal', 'Les Misérables']],
+          [{ avecIsbn: false }, ['Archives municipales', 'Registre paroissial 1789']],
+          [{ avecCouverture: true }, ['Les Misérables']],
+          [{ avecCouverture: false }, ['Archives municipales', 'Germinal', 'Registre paroissial 1789']],
+          [{ terme: 'HUGO' }, ['Les Misérables']],
+          [{ terme: '978-0-306' }, ['Les Misérables']],
+          [{ terme: 'paroissial' }, ['Registre paroissial 1789']],
+          [{ terme: 'e', avecIsbn: false }, ['Archives municipales', 'Registre paroissial 1789']],
+          [{ terme: '_100%' }, ['Germinal']],
+          [{ terme: 'balzac' }, []],
+        ] as const)('filtre selon %j', async (criteres, attendus) => {
+          const resultat = await lister(criteres);
+          expect(resultat.titres).toEqual(attendus);
+          expect(resultat.total).toBe(attendus.length);
+        });
+
+        it('pagine en conservant le total', async () => {
+          expect(await lister({ parPage: 3, page: 1 })).toMatchObject({ total: 4, titres: ['Archives municipales', 'Germinal', 'Les Misérables'] });
+          expect(await lister({ parPage: 3, page: 2 })).toMatchObject({ total: 4, titres: ['Registre paroissial 1789'] });
+          expect(await lister({ parPage: 3, page: 3 })).toMatchObject({ total: 4, titres: [] });
+        });
+
+        it('compte « mal rangé » exactement comme Exemplaire.estMalRange', async () => {
+          jamaisDetecte.enregistrerDetection(h.etagere2, date); // Germinal : rangé sur R1, vu sur R2
+          await repos.exemplaires.enregistrer(jamaisDetecte);
+          sansIsbn.enregistrerDetection(h.etagere2, date); // Registre : rangé et vu sur R2
+          await repos.exemplaires.enregistrer(sansIsbn);
+
+          const { lignes } = await lister();
+          expect(lignes.map((l) => [l.livre.titre, l.nombreMalRanges])).toEqual([
+            ['Archives municipales', 0],
+            ['Germinal', 1],
+            ['Les Misérables', 1],
+            ['Registre paroissial 1789', 0],
+          ]);
+        });
       });
     });
   });

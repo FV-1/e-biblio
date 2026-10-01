@@ -83,6 +83,20 @@ export class Livre {
 }
 
 /**
+ * Clés de tri alphabétique d'un livre : sans casse ni accents, pour que
+ * « Émile Zola » se range avec les E. Exportées pour que les adapters de
+ * persistance trient exactement comme le domaine.
+ */
+export function cleTriTitre(livre: Livre): string {
+  return normaliserPourRecherche(livre.titre);
+}
+
+/** Premier auteur normalisé ; chaîne vide si le livre n'a pas d'auteur. */
+export function cleTriAuteur(livre: Livre): string {
+  return normaliserPourRecherche(livre.auteurs[0] ?? '');
+}
+
+/**
  * Forme sous laquelle un terme (déjà normalisé) est cherché dans l'ISBN :
  * un ISBN complet valide (10 ou 13) est converti en ISBN-13, sinon on retire
  * simplement tirets et espaces pour permettre une recherche partielle.

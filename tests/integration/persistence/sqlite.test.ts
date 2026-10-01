@@ -111,6 +111,27 @@ describe('Migration v1 → v2 (ISBN facultatif)', () => {
   });
 });
 
+describe('Migration v2 → v3 (clés de tri)', () => {
+  it('remplit les clés de tri des livres existants avec la règle du domaine', () => {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    migrer(db, 2);
+    db.exec(`
+      INSERT INTO livres (id, isbn, titre, auteurs, couverture, texte_recherche) VALUES
+        ('a', NULL, 'L''Étranger', '["Albert Camus"]', NULL, ''),
+        ('b', NULL, 'Sans auteur', '[]', NULL, '');
+    `);
+
+    migrer(db);
+
+    expect(db.prepare('SELECT id, titre_tri, auteur_tri FROM livres ORDER BY id').all()).toEqual([
+      { id: 'a', titre_tri: "l'etranger", auteur_tri: 'albert camus' },
+      { id: 'b', titre_tri: 'sans auteur', auteur_tri: '' },
+    ]);
+    db.close();
+  });
+});
+
 describe('Base SQLite sur fichier', () => {
   let dossier: string;
   beforeEach(() => {

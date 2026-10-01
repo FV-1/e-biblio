@@ -31,13 +31,20 @@ export class ExemplaireRepositoryEnMemoire implements ExemplaireRepository {
     return this.tous().filter((e) => e.estMalRange());
   }
 
+  async trouverParLivre(livreId: string): Promise<Exemplaire[]> {
+    return this.tous()
+      .filter((e) => e.livreId === livreId)
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
   async existeAvecEmplacement(emplacementId: string): Promise<boolean> {
     return this.tous().some(
       (e) => e.emplacementId === emplacementId || e.derniereDetection?.emplacementId === emplacementId,
     );
   }
 
-  private tous(): Exemplaire[] {
+  /** Accès synchrone réservé aux autres fakes (modèle de lecture). */
+  tous(): Exemplaire[] {
     return [...this.donnees.values()].map((s) => Exemplaire.reconstituer(s));
   }
 }
