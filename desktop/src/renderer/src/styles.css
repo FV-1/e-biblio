@@ -824,6 +824,288 @@ textarea:focus-visible {
   color: var(--succes);
 }
 
+/* ---------- Base de données ---------- */
+
+.contenu-large {
+  max-width: 1280px;
+}
+
+.texte-doux {
+  color: var(--texte-doux);
+}
+
+.barre-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.champ-recherche-base {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 280px;
+}
+
+.champ-recherche-base input {
+  padding-left: 38px;
+}
+
+.champ-recherche-base .icone-champ {
+  left: 12px;
+}
+
+.filtre {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.filtre label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--texte-doux);
+}
+
+.filtre select {
+  width: auto;
+  min-width: 9rem;
+  padding: 8px 10px;
+}
+
+.bouton-icone {
+  padding: 9px;
+}
+
+.tableau-conteneur {
+  margin-top: 12px;
+  overflow-x: auto;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  box-shadow: var(--ombre);
+  transition: opacity 0.15s;
+}
+
+.tableau-en-chargement {
+  opacity: 0.55;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.tableau th,
+.tableau td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.tableau thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texte-doux);
+  white-space: nowrap;
+}
+
+.tableau .numerique {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bouton-tri {
+  gap: 6px;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.bouton-tri:hover:not(:disabled) {
+  background: none;
+  color: var(--texte);
+}
+
+.tri-actif {
+  color: var(--accent);
+}
+
+.fleche-tri {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.ligne-oeuvre {
+  cursor: pointer;
+}
+
+.ligne-oeuvre:hover {
+  background: var(--surface-2);
+}
+
+.ligne-depliee,
+.ligne-depliee:hover {
+  background: var(--accent-doux);
+}
+
+.ligne-depliee td {
+  border-bottom-color: transparent;
+}
+
+.col-deplier,
+.col-couverture {
+  width: 1%;
+  padding-right: 0 !important;
+}
+
+.col-titre {
+  font-weight: 600;
+}
+
+.col-auteurs {
+  min-width: 11rem;
+}
+
+.col-isbn {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bouton-deplier {
+  padding: 4px;
+  background: none;
+  color: var(--texte-doux);
+}
+
+.bouton-deplier:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.bouton-deplier svg {
+  transition: transform 0.15s;
+}
+
+.bouton-deplier[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+.couverture-mini {
+  width: 30px;
+  height: 44px;
+  font-size: 0.85rem;
+  border-radius: 3px;
+}
+
+.cellule-vide {
+  padding: 32px !important;
+  text-align: center !important;
+  color: var(--texte-doux);
+}
+
+.ligne-detail > td {
+  padding: 4px 16px 16px 56px;
+  background: var(--accent-doux);
+}
+
+.detail-oeuvre {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.liste-exemplaires {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exemplaire {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--bordure);
+  border-left: 3px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+}
+
+.exemplaire-mal-range {
+  border-left-color: var(--alerte);
+}
+
+.exemplaire-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.exemplaire-id {
+  color: var(--texte-doux);
+}
+
+.exemplaire-vu-ailleurs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--alerte);
+}
+
+.detail-pied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pagination-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-pages > button.secondaire {
+  padding: 5px 12px;
+}
+
+.pagination .filtre {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination .filtre select {
+  min-width: 0;
+  padding: 5px 8px;
+}
+
 /* ---------- Téléphone ---------- */
 
 .mode-telephone {

@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Livre } from '../../commun/api';
 import { EcranAjout, type Scan } from './ajout/EcranAjout';
+import { EcranBase } from './base/EcranBase';
 import { ParametresServeur } from './parametres/ParametresServeur';
 import { EcranRecherche } from './recherche/EcranRecherche';
 import { useAppairage } from './telephone/use-appairage';
-import { IconeLivres, IconePlus, IconeRecherche, IconeTelephone } from './ui/icones';
+import { IconeBase, IconeLivres, IconePlus, IconeRecherche, IconeTelephone } from './ui/icones';
 
-type Onglet = 'recherche' | 'ajout';
+type Onglet = 'recherche' | 'base' | 'ajout';
 
 export function App() {
   const [onglet, setOnglet] = useState<Onglet>('recherche');
@@ -58,6 +59,9 @@ export function App() {
             <Onglet actif={onglet === 'recherche'} controle="vue-recherche" onClick={() => setOnglet('recherche')}>
               <IconeRecherche /> Rechercher
             </Onglet>
+            <Onglet actif={onglet === 'base'} controle="vue-base" onClick={() => setOnglet('base')}>
+              <IconeBase /> Base de données
+            </Onglet>
             <Onglet actif={onglet === 'ajout'} controle="vue-ajout" onClick={() => setOnglet('ajout')}>
               <IconePlus /> Ajouter un livre
             </Onglet>
@@ -71,10 +75,13 @@ export function App() {
         </div>
       </header>
 
-      {/* Les deux écrans restent montés : changer d'onglet ne perd ni la recherche ni l'ajout en cours. */}
-      <main className="contenu">
+      {/* Les écrans restent montés : changer d'onglet ne perd ni la recherche, ni les filtres, ni l'ajout en cours. */}
+      <main className={`contenu${onglet === 'base' ? ' contenu-large' : ''}`}>
         <div id="vue-recherche" role="tabpanel" aria-label="Rechercher" hidden={onglet !== 'recherche'}>
           <EcranRecherche onAjouterExemplaire={ouvrirAjout} requeteExterne={requete} demandeFocus={demandeFocus} />
+        </div>
+        <div id="vue-base" role="tabpanel" aria-label="Base de données" hidden={onglet !== 'base'}>
+          <EcranBase onAjouterExemplaire={ouvrirAjout} actif={onglet === 'base'} />
         </div>
         <div id="vue-ajout" role="tabpanel" aria-label="Ajouter un livre" hidden={onglet !== 'ajout'}>
           <EcranAjout

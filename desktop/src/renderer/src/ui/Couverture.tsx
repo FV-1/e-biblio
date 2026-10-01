@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 /** Couverture, remplacée par un aplat avec l'initiale si absente ou si l'image ne charge pas (hors ligne…). */
-export function Couverture({ url, titre, taille = 'normale' }: { url: string | null; titre: string; taille?: 'normale' | 'petite' }) {
+export function Couverture({ url, titre, taille = 'normale' }: { url: string | null; titre: string; taille?: 'normale' | 'petite' | 'mini' }) {
   const [enErreur, setEnErreur] = useState(false);
   const classe = `couverture couverture-${taille}`;
   if (!url || enErreur) {
@@ -11,5 +11,5 @@ export function Couverture({ url, titre, taille = 'normale' }: { url: string | n
       </div>
     );
   }
-  return <img className={classe} src={url} alt={`Couverture de ${titre}`} onError={() => setEnErreur(true)} />;
+  return <img className={classe} src={url} alt={`Couverture de ${titre}`} loading="lazy" onError={() => setEnErreur(true)} />;
 }

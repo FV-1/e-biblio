@@ -84,6 +84,27 @@ export const IconeEtagere = (p: P) => (
   </Icone>
 );
 
+export const IconeBase = (p: P) => (
+  <Icone {...p}>
+    <ellipse cx="12" cy="5.5" rx="8" ry="3" />
+    <path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+    <path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+  </Icone>
+);
+
+export const IconeChevron = (p: P) => (
+  <Icone {...p}>
+    <path d="m9 6 6 6-6 6" />
+  </Icone>
+);
+
+export const IconeActualiser = (p: P) => (
+  <Icone {...p}>
+    <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+    <path d="M20 4v7h-7" />
+  </Icone>
+);
+
 export const IconeFermer = (p: P) => (
   <Icone {...p}>
     <path d="M6 6l12 12M18 6 6 18" />
