@@ -1,5 +1,17 @@
 import type { z } from 'zod';
-import { schemaErreurApi, schemaListeExemplaires, schemaSante, type Exemplaire } from '../commun/api';
+import {
+  schemaErreurApi,
+  schemaExemplaireAjoute,
+  schemaListeEmplacements,
+  schemaListeExemplaires,
+  schemaNotice,
+  schemaSante,
+  type DemandeAjout,
+  type Emplacement,
+  type Exemplaire,
+  type ExemplaireAjoute,
+  type Notice,
+} from '../commun/api';
 import { echec, succes, type Resultat, type ServiceRecherche } from '../commun/service-bibliotheque';
 
 export interface OptionsClientApi {
@@ -33,13 +45,39 @@ export class ClientApiHttp implements ServiceRecherche {
     return resultat.ok ? succes(null) : resultat;
   }
 
-  private async get<T>(chemin: string, schema: z.ZodType<T>): Promise<Resultat<T>> {
+  async listerEmplacements(): Promise<Resultat<Emplacement[]>> {
+    return this.get('/emplacements', schemaListeEmplacements);
+  }
+
+  async consulterNotice(isbn: string): Promise<Resultat<Notice>> {
+    return this.get(`/livres/${encodeURIComponent(isbn.trim())}`, schemaNotice);
+  }
+
+  async ajouterExemplaire(demande: DemandeAjout): Promise<Resultat<ExemplaireAjoute>> {
+    return this.requete('POST', '/exemplaires', schemaExemplaireAjoute, corpsAjout(demande));
+  }
+
+  private get<T>(chemin: string, schema: z.ZodType<T>): Promise<Resultat<T>> {
+    return this.requete('GET', chemin, schema);
+  }
+
+  private async requete<T>(
+    methode: 'GET' | 'POST',
+    chemin: string,
+    schema: z.ZodType<T>,
+    corpsRequete?: unknown,
+  ): Promise<Resultat<T>> {
     const base = this.options.urlServeur();
 
     let reponse: Response;
     try {
       reponse = await this.fetch(new URL(chemin, base), {
-        headers: { Accept: 'application/json' },
+        method: methode,
+        headers:
+          corpsRequete === undefined
+            ? { Accept: 'application/json' }
+            : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: corpsRequete === undefined ? undefined : JSON.stringify(corpsRequete),
         signal: AbortSignal.timeout(this.options.delaiMaxMs),
       });
     } catch (erreur) {
@@ -69,6 +107,25 @@ export class ClientApiHttp implements ServiceRecherche {
     return donnees.success
       ? succes(donnees.data)
       : echec({ type: 'reponse-invalide', message: 'La réponse du serveur ne respecte pas le format attendu' });
+  }
+}
+
+/** Traduit la demande du client vers le corps attendu par POST /exemplaires. */
+function corpsAjout(demande: DemandeAjout): Record<string, unknown> {
+  const { livre } = demande;
+  switch (livre.type) {
+    case 'isbn':
+      return { emplacementId: demande.emplacementId, isbn: livre.isbn };
+    case 'existant':
+      return { emplacementId: demande.emplacementId, livreId: livre.livreId };
+    case 'saisie':
+      return {
+        emplacementId: demande.emplacementId,
+        ...(livre.isbn ? { isbn: livre.isbn } : {}),
+        titre: livre.titre,
+        auteurs: livre.auteurs,
+        couverture: livre.couverture,
+      };
   }
 }
 

@@ -9,6 +9,9 @@ import { CANAUX_IPC, type ServiceBibliotheque } from '../commun/service-biblioth
 const service: ServiceBibliotheque = {
   rechercherExemplaires: (terme) => ipcRenderer.invoke(CANAUX_IPC.rechercherExemplaires, terme),
   verifierConnexion: () => ipcRenderer.invoke(CANAUX_IPC.verifierConnexion),
+  listerEmplacements: () => ipcRenderer.invoke(CANAUX_IPC.listerEmplacements),
+  consulterNotice: (isbn) => ipcRenderer.invoke(CANAUX_IPC.consulterNotice, isbn),
+  ajouterExemplaire: (demande) => ipcRenderer.invoke(CANAUX_IPC.ajouterExemplaire, demande),
   lireConfiguration: () => ipcRenderer.invoke(CANAUX_IPC.lireConfiguration),
   modifierUrlServeur: (url) => ipcRenderer.invoke(CANAUX_IPC.modifierUrlServeur, url),
 };

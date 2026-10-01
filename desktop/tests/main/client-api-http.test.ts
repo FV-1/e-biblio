@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { DemandeAjout } from '../../src/commun/api';
 import { ClientApiHttp } from '../../src/main/client-api-http';
-import { exemplaireBienRange, exemplaireMalRange } from '../fixtures/exemplaires';
+import { emplacements, exemplaireBienRange, exemplaireMalRange } from '../fixtures/exemplaires';
 
 /** fetch simulé : aucune requête réseau réelle. */
 function client(repondre: (url: URL) => Response | Error, urlServeur = 'http://serveur.test:3000') {
@@ -90,6 +91,63 @@ describe('ClientApiHttp.rechercherExemplaires', () => {
     url = 'http://b.test:8080';
     await c.rechercherExemplaires('x');
     expect(appels).toEqual(['a.test', 'b.test:8080']);
+  });
+});
+
+describe('ClientApiHttp : emplacements, notices et ajout', () => {
+  /** fetch simulé qui enregistre méthode, URL et corps. */
+  function clientEspion(reponse: Response) {
+    const requetes: { methode: string; url: string; corps: unknown }[] = [];
+    const c = new ClientApiHttp({
+      urlServeur: () => 'http://serveur.test',
+      delaiMaxMs: 1000,
+      fetch: (async (url: URL, init: RequestInit) => {
+        requetes.push({ methode: init.method ?? 'GET', url: url.pathname, corps: init.body ? JSON.parse(String(init.body)) : undefined });
+        return reponse;
+      }) as unknown as typeof fetch,
+    });
+    return { c, requetes };
+  }
+
+  it('liste les emplacements', async () => {
+    const { c, requetes } = clientEspion(json(emplacements));
+    expect(await c.listerEmplacements()).toEqual({ ok: true, valeur: emplacements });
+    expect(requetes).toEqual([{ methode: 'GET', url: '/emplacements', corps: undefined }]);
+  });
+
+  it('consulte la notice d’un ISBN (encodé dans l’URL)', async () => {
+    const notice = { source: 'catalogue', livre: { id: null, isbn: '9782070368228', titre: '1984', auteurs: [], couverture: null } };
+    const { c, requetes } = clientEspion(json(notice));
+    expect(await c.consulterNotice(' 978-2-07 ')).toEqual({ ok: true, valeur: notice });
+    expect(requetes[0]?.url).toBe('/livres/978-2-07');
+  });
+
+  const cas: [DemandeAjout['livre'], Record<string, unknown>][] = [
+    [{ type: 'isbn', isbn: '9782070368228' }, { emplacementId: 'e1', isbn: '9782070368228' }],
+    [{ type: 'existant', livreId: 'livre-1' }, { emplacementId: 'e1', livreId: 'livre-1' }],
+    [
+      { type: 'saisie', isbn: null, titre: 'Registre', auteurs: ['Anonyme'], couverture: null },
+      { emplacementId: 'e1', titre: 'Registre', auteurs: ['Anonyme'], couverture: null },
+    ],
+    [
+      { type: 'saisie', isbn: '9780306406157', titre: 'Les Misérables', auteurs: [], couverture: null },
+      { emplacementId: 'e1', isbn: '9780306406157', titre: 'Les Misérables', auteurs: [], couverture: null },
+    ],
+  ];
+
+  it.each(cas)('traduit la demande %j en POST /exemplaires', async (livre, corpsAttendu) => {
+    const { c, requetes } = clientEspion(json({ ...exemplaireBienRange, sourceLivre: 'catalogue' }, 201));
+    const resultat = await c.ajouterExemplaire({ emplacementId: 'e1', livre });
+    expect(resultat).toMatchObject({ ok: true, valeur: { id: 'ex-1', sourceLivre: 'catalogue' } });
+    expect(requetes).toEqual([{ methode: 'POST', url: '/exemplaires', corps: corpsAttendu }]);
+  });
+
+  it('transmet l’erreur métier d’un ajout refusé', async () => {
+    const { c } = clientEspion(json({ erreur: { code: 'CATALOGUE_INDISPONIBLE', message: 'hors ligne' } }, 422));
+    expect(await c.ajouterExemplaire({ emplacementId: 'e1', livre: { type: 'isbn', isbn: '9782070368228' } })).toEqual({
+      ok: false,
+      erreur: { type: 'erreur-api', code: 'CATALOGUE_INDISPONIBLE', message: 'hors ligne' },
+    });
   });
 });
 

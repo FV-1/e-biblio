@@ -2,6 +2,7 @@ import type { IpcMain } from 'electron';
 import { describe, expect, it } from 'vitest';
 import { CANAUX_IPC, succes, type Configuration, type ServiceBibliotheque } from '../../src/commun/service-bibliotheque';
 import { brancherIpc } from '../../src/main/ipc';
+import { exemplaireBienRange } from '../fixtures/exemplaires';
 
 /** Faux ipcMain : mémorise les gestionnaires pour les appeler comme le ferait Electron. */
 function fauxIpc() {
@@ -21,6 +22,15 @@ function serviceEspion() {
       return succes([]);
     },
     verifierConnexion: async () => succes(null),
+    listerEmplacements: async () => succes([]),
+    consulterNotice: async (isbn) => {
+      appels.push({ methode: 'notice', argument: isbn });
+      return succes({ source: 'catalogue', livre: { id: null, isbn, titre: 'T', auteurs: [], couverture: null } });
+    },
+    ajouterExemplaire: async (demande) => {
+      appels.push({ methode: 'ajouter', argument: demande });
+      return succes({ ...exemplaireBienRange, sourceLivre: 'base' });
+    },
     lireConfiguration: async () => CONFIGURATION,
     modifierUrlServeur: async (url) => {
       appels.push({ methode: 'modifierUrl', argument: url });
@@ -71,6 +81,29 @@ describe('brancherIpc', () => {
     await appeler(CANAUX_IPC.modifierUrlServeur, 'http://y:3000');
     await appeler(CANAUX_IPC.modifierUrlServeur, null);
     expect(appels.map((a) => a.argument)).toEqual(['http://y:3000', null]);
+  });
+
+  it('relaie l’aperçu de notice et l’ajout validés', async () => {
+    const { appeler, appels } = brancher();
+    const demande = { emplacementId: 'e1', livre: { type: 'isbn', isbn: '9782070368228' } };
+    await appeler(CANAUX_IPC.consulterNotice, ' 9782070368228 ');
+    await appeler(CANAUX_IPC.ajouterExemplaire, demande);
+    expect(appels).toEqual([
+      { methode: 'notice', argument: '9782070368228' },
+      { methode: 'ajouter', argument: demande },
+    ]);
+  });
+
+  it.each([
+    [CANAUX_IPC.consulterNotice, 42],
+    [CANAUX_IPC.consulterNotice, ''],
+    [CANAUX_IPC.ajouterExemplaire, { emplacementId: 'e1' }],
+    [CANAUX_IPC.ajouterExemplaire, { emplacementId: 'e1', livre: { type: 'pirate' } }],
+    [CANAUX_IPC.ajouterExemplaire, { emplacementId: 'e1', livre: { type: 'saisie', isbn: null, titre: '', auteurs: [], couverture: null } }],
+  ])('refuse un argument invalide sur %s (%j)', async (canal, argument) => {
+    const { appeler, appels } = brancher();
+    expect(await appeler(canal, argument)).toMatchObject({ ok: false, erreur: { type: 'requete-invalide' } });
+    expect(appels).toEqual([]);
   });
 
   it.each([[42], [undefined], [{ url: 'x' }], ['x'.repeat(501)]])(

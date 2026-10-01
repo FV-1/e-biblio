@@ -20,6 +20,9 @@ function composerService(): ServiceBibliotheque {
   return {
     rechercherExemplaires: (terme) => client.rechercherExemplaires(terme),
     verifierConnexion: () => client.verifierConnexion(),
+    listerEmplacements: () => client.listerEmplacements(),
+    consulterNotice: (isbn) => client.consulterNotice(isbn),
+    ajouterExemplaire: (demande) => client.ajouterExemplaire(demande),
     lireConfiguration: () => configuration.lireConfiguration(),
     modifierUrlServeur: (url) => configuration.modifierUrlServeur(url),
   };

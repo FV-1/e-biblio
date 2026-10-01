@@ -1,5 +1,6 @@
 import type { IpcMain } from 'electron';
 import { z } from 'zod';
+import { schemaDemandeAjout } from '../commun/api';
 import { CANAUX_IPC, echec, type ServiceBibliotheque } from '../commun/service-bibliotheque';
 
 /**
@@ -8,19 +9,31 @@ import { CANAUX_IPC, echec, type ServiceBibliotheque } from '../commun/service-b
  * est validé avant usage.
  */
 export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceBibliotheque): void {
+  const invalide = (message: string) => echec({ type: 'requete-invalide', message });
+
   ipc.handle(CANAUX_IPC.rechercherExemplaires, async (_evenement, terme: unknown) => {
     const valide = z.string().max(200).safeParse(terme);
-    if (!valide.success) return echec({ type: 'requete-invalide', message: 'Terme de recherche invalide' });
-    return service.rechercherExemplaires(valide.data);
+    return valide.success ? service.rechercherExemplaires(valide.data) : invalide('Terme de recherche invalide');
   });
 
   ipc.handle(CANAUX_IPC.verifierConnexion, async () => service.verifierConnexion());
+
+  ipc.handle(CANAUX_IPC.listerEmplacements, async () => service.listerEmplacements());
+
+  ipc.handle(CANAUX_IPC.consulterNotice, async (_evenement, isbn: unknown) => {
+    const valide = z.string().trim().min(1).max(30).safeParse(isbn);
+    return valide.success ? service.consulterNotice(valide.data) : invalide('ISBN invalide');
+  });
+
+  ipc.handle(CANAUX_IPC.ajouterExemplaire, async (_evenement, demande: unknown) => {
+    const valide = schemaDemandeAjout.safeParse(demande);
+    return valide.success ? service.ajouterExemplaire(valide.data) : invalide('Demande d’ajout invalide');
+  });
 
   ipc.handle(CANAUX_IPC.lireConfiguration, async () => service.lireConfiguration());
 
   ipc.handle(CANAUX_IPC.modifierUrlServeur, async (_evenement, url: unknown) => {
     const valide = z.string().max(500).nullable().safeParse(url);
-    if (!valide.success) return echec({ type: 'requete-invalide', message: 'URL invalide' });
-    return service.modifierUrlServeur(valide.data);
+    return valide.success ? service.modifierUrlServeur(valide.data) : invalide('URL invalide');
   });
 }

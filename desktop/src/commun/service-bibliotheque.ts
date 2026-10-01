@@ -1,4 +1,4 @@
-import type { Exemplaire } from './api';
+import type { DemandeAjout, Emplacement, Exemplaire, ExemplaireAjoute, Notice } from './api';
 
 /**
  * Erreurs possibles, toujours renvoyées comme des valeurs (jamais levées) :
@@ -32,6 +32,10 @@ export interface Configuration {
 export interface ServiceRecherche {
   rechercherExemplaires(terme: string): Promise<Resultat<Exemplaire[]>>;
   verifierConnexion(): Promise<Resultat<null>>;
+  listerEmplacements(): Promise<Resultat<Emplacement[]>>;
+  /** Aperçu de la notice d'un ISBN, sans rien enregistrer. */
+  consulterNotice(isbn: string): Promise<Resultat<Notice>>;
+  ajouterExemplaire(demande: DemandeAjout): Promise<Resultat<ExemplaireAjoute>>;
 }
 
 /** Réglages du client (implémenté par le stockage de configuration). */
@@ -53,6 +57,9 @@ export interface ServiceBibliotheque extends ServiceRecherche, ServiceConfigurat
 export const CANAUX_IPC = {
   rechercherExemplaires: 'biblio:rechercher-exemplaires',
   verifierConnexion: 'biblio:verifier-connexion',
+  listerEmplacements: 'biblio:lister-emplacements',
+  consulterNotice: 'biblio:consulter-notice',
+  ajouterExemplaire: 'biblio:ajouter-exemplaire',
   lireConfiguration: 'biblio:lire-configuration',
   modifierUrlServeur: 'biblio:modifier-url-serveur',
 } as const;
