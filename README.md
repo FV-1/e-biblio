@@ -8,7 +8,7 @@ Le dépôt contient deux applications indépendantes, qui ne communiquent que pa
 | Dossier | Contenu |
 |---|---|
 | `/` (racine) | **Serveur** : API REST en TypeScript, Node.js, Express 5, zod et SQLite (better-sqlite3), en architecture hexagonale |
-| `desktop/` | **Client desktop** : application Electron et React pour rechercher un exemplaire et afficher sa localisation |
+| `desktop/` | **Client desktop** : application Electron et React pour rechercher un exemplaire, afficher sa localisation et ajouter des livres (par ISBN, avec un téléphone servant de lecteur de codes-barres, ou par saisie manuelle) |
 
 ---
 
@@ -73,6 +73,21 @@ L'adresse du serveur se règle de trois façons, par ordre de priorité :
 
 > Si la fenêtre Electron ne s'ouvre pas, la variable `ELECTRON_RUN_AS_NODE` est probablement définie (c'est le cas dans certains terminaux intégrés). Avec elle, Electron démarre comme un simple Node.js. Les scripts npm du dossier `desktop/` la retirent automatiquement ; si vous lancez `electron` vous-même, supprimez-la d'abord.
 
+### 3. Utiliser l'application
+
+- **Rechercher** (`Ctrl+K`) : les résultats s'affichent pendant la frappe (titre, auteur ou ISBN, sans tenir compte des accents). Les filtres permettent d'isoler les exemplaires mal rangés ou jamais détectés. Chaque carte propose d'**ajouter un exemplaire** du même livre.
+- **Ajouter un livre**, de trois façons :
+  1. **Par ISBN** : la notice (titre, auteurs, couverture) est affichée pour vérification avant l'ajout. Si l'ISBN est inconnu ou si Open Library ne répond pas, un bouton bascule vers la saisie manuelle en conservant l'ISBN.
+  2. **Avec le téléphone** : l'application affiche un QR code. Scannez-le avec l'appareil photo du téléphone, puis photographiez le code-barres du livre ; la notice s'affiche aussitôt sur l'ordinateur. Il n'y a rien à installer sur le téléphone, et la session reste active pour scanner plusieurs livres à la suite.
+  3. **Saisie manuelle** : titre obligatoire ; auteurs, couverture et **ISBN facultatifs** (ouvrages anciens, documents internes…).
+
+  Il faut ensuite choisir l'étagère (salle › rayon › étagère). La dernière étagère utilisée est proposée par défaut.
+
+**Prérequis pour le téléphone** :
+- Il doit être sur le **même réseau Wi-Fi** que l'ordinateur.
+- L'application ouvre un petit serveur local (port `47800`, ou un port libre s'il est occupé). Au premier lancement, Windows peut demander d'autoriser e-biblio sur le réseau : acceptez pour les réseaux privés.
+- Si le QR code ne fonctionne pas, l'application propose les autres cartes réseau du poste.
+
 ---
 
 ## API REST
@@ -89,7 +104,8 @@ Toutes les requêtes et réponses sont au format JSON. Le fichier [`requests.htt
 | `POST` | `/emplacements` | Crée un emplacement | 201 |
 | `PATCH` | `/emplacements/:id` | Modifie le nom, le parent ou les coordonnées (`null` retire les coordonnées) | 200 |
 | `DELETE` | `/emplacements/:id` | Supprime un emplacement vide | 204 |
-| `POST` | `/exemplaires` | Ajoute un exemplaire par ISBN, via Open Library ou par saisie manuelle | 201 |
+| `POST` | `/exemplaires` | Ajoute un exemplaire : par ISBN (Open Library), par saisie manuelle (ISBN facultatif) ou pour un livre existant (`livreId`) | 201 |
+| `GET` | `/livres/:isbn` | Aperçu de la notice d'un ISBN (base ou Open Library), **sans rien enregistrer** | 200 |
 | `GET` | `/exemplaires?q=…` | Recherche par titre, auteur ou ISBN, avec la localisation complète | 200 |
 | `GET` | `/exemplaires/mal-ranges` | Exemplaires dont la position constatée diffère de la position théorique | 200 |
 | `GET` | `/exemplaires/:id` | Détail et localisation d'un exemplaire | 200 |
@@ -110,6 +126,12 @@ Toutes les requêtes et réponses sont au format JSON. Le fichier [`requests.htt
 { "isbn": "9780306406157", "emplacementId": "etagere-2-1-1",
   "titre": "Les Misérables", "auteurs": ["Victor Hugo"], "couverture": null }
 
+// POST /exemplaires : saisie manuelle SANS ISBN
+{ "emplacementId": "etagere-2-2-1", "titre": "Registre paroissial de 1789", "auteurs": ["Anonyme"] }
+
+// POST /exemplaires : nouvel exemplaire d'un livre déjà enregistré (avec ou sans ISBN)
+{ "emplacementId": "etagere-2-2-2", "livreId": "…" }
+
 // POST /detections
 { "exemplaireId": "…", "emplacementId": "etagere-1-2-3" }
 ```
@@ -121,6 +143,7 @@ Toutes les requêtes et réponses sont au format JSON. Le fichier [`requests.htt
 - Un exemplaire est **mal rangé** si sa dernière position constatée diffère de sa position théorique. Un exemplaire jamais détecté n'est pas considéré comme mal rangé.
 - Un emplacement qui a des enfants, ou sur lequel un exemplaire est rangé ou a été détecté, **ne peut pas être supprimé** (réponse 409).
 - **ISBN** : un ISBN-10 ou un ISBN-13 est accepté, avec ou sans tirets. La clé de contrôle est vérifiée, et l'ISBN est toujours enregistré au format ISBN-13.
+- **ISBN facultatif** : un livre est identifié par un identifiant interne ; l'ISBN, quand il existe, est unique et sert à retrouver la notice. Un livre sans ISBN reste trouvable par son titre et ses auteurs.
 - **Coordonnées** : elles sont facultatives. Un emplacement qui n'en a pas prend celles de son ancêtre le plus proche qui en a.
 - **Ajout d'un exemplaire** : si le livre est déjà en base, aucun appel externe n'est fait. Sinon, on utilise la saisie manuelle si elle est fournie, et à défaut Open Library. Si Open Library ne répond pas, ou ne connaît pas l'ISBN, la réponse est une erreur 422 (`CATALOGUE_INDISPONIBLE` ou `LIVRE_INCONNU_DU_CATALOGUE`). Il suffit alors de renvoyer la requête avec `titre` et `auteurs`.
 
@@ -135,7 +158,7 @@ Toutes les erreurs ont le même format :
 | Statut | Cas | Exemples de codes |
 |---|---|---|
 | 400 | Requête mal formée (validation zod, JSON illisible) | `REQUETE_INVALIDE`, `JSON_INVALIDE` |
-| 404 | Ressource ou route inexistante | `EMPLACEMENT_INTROUVABLE`, `EXEMPLAIRE_INTROUVABLE`, `ROUTE_INCONNUE` |
+| 404 | Ressource ou route inexistante | `EMPLACEMENT_INTROUVABLE`, `EXEMPLAIRE_INTROUVABLE`, `LIVRE_INTROUVABLE`, `ROUTE_INCONNUE` |
 | 409 | Conflit avec l'état actuel | `EMPLACEMENT_NON_VIDE` |
 | 422 | Règle métier violée | `ISBN_INVALIDE`, `HIERARCHIE_INVALIDE`, `EMPLACEMENT_NON_RANGEABLE`, `CATALOGUE_INDISPONIBLE` |
 | 500 | Erreur inattendue (détail visible dans la console du serveur) | `ERREUR_INTERNE` |
@@ -181,12 +204,24 @@ Principaux choix :
 ```
 desktop/src/
 ├── commun/     Contrat partagé : schémas de l'API (zod), port ServiceBibliotheque, canaux IPC
-├── main/       Processus Node d'Electron : client HTTP, stockage de configuration, IPC (composition root)
+├── main/       Processus Node d'Electron (composition root) : client HTTP, stockage de
+│   │           configuration, IPC
+│   └── appairage/  Serveur local du téléphone, adresses réseau, page mobile (HTML/JS)
 ├── preload/    Pont sécurisé : expose window.biblio, qui relaie chaque appel au processus main par IPC
 └── renderer/   React : les composants ne dépendent que du port, fourni par un contexte React
+    ├── recherche/  Écran de recherche, cartes, filtres
+    ├── ajout/      Écran d'ajout : ISBN, saisie manuelle, choix de l'étagère
+    └── telephone/  Session d'appairage, QR code
 ```
 
+- **Le port est découpé en trois interfaces** (`ServiceRecherche`, `ServiceConfiguration`, `ServiceAppairage`), chacune implémentée par son propre adapter dans le processus main. `ServiceBibliotheque` les réunit pour la page.
 - **Le front n'importe aucun code du serveur.** Le seul lien entre les deux est le contrat HTTP, que le processus main vérifie à chaque réponse avec zod.
+- **Le téléphone ne parle qu'au poste qui affiche le QR code.** L'appairage est une affaire d'interface, pas de métier : le serveur API n'est pas concerné.
+  - Le mini-serveur exige un **jeton aléatoire de 128 bits** présent dans l'URL du QR code, et n'accepte qu'un ISBN.
+  - L'ISBN reçu est poussé vers la page par un **événement IPC** (main → page), sans scrutation répétée.
+- **Lecture du code-barres** :
+  - Sur un réseau local en HTTP, les navigateurs mobiles interdisent le flux vidéo en direct (il faudrait HTTPS). La page mobile passe donc par une **photo**, puis lit le code-barres dans l'image.
+  - Elle utilise l'API `BarcodeDetector` du navigateur quand elle existe (Chrome Android), sinon **ZXing**, qui fonctionne partout, y compris sur iPhone.
 - **La page n'a aucun accès réseau ni Node.js.** Isolation du contexte, sandbox et politique de sécurité (CSP) sont activées ; tous les appels passent par le processus main. Résultat : pas de CORS à configurer côté serveur.
 - **Les erreurs sont renvoyées comme des valeurs** (`{ ok: false, erreur }`), parce que les exceptions traversent mal la frontière IPC d'Electron.
 
@@ -203,12 +238,16 @@ npm run typecheck
 
 # Client desktop
 cd desktop
-npm test                   # client HTTP, IPC, configuration, composants React avec un faux service
+npm test                   # client HTTP, IPC, configuration, appairage, écrans React avec un faux service
 npm run typecheck
 ```
 
 - **Tests de contrat** : une même série de cas (`tests/contrats/`) s'exécute contre les fakes en mémoire *et* contre SQLite. On garantit ainsi que les fakes utilisés pour tester les cas d'usage se comportent comme les vrais adapters.
-- **Aucun test ne touche le réseau.** Les clients HTTP reçoivent un `fetch` injecté.
+- **Migrations** : la conversion du schéma v1 vers v2 (ISBN facultatif) est testée sur des données réelles.
+- **Aucun test ne sort sur le réseau.**
+  - Les clients HTTP reçoivent un `fetch` injecté.
+  - Le serveur d'appairage est testé en écoutant uniquement sur `127.0.0.1`.
+- **Lecture des codes-barres** : un test dessine un code-barres EAN-13 conforme à la norme, puis vérifie que le décodeur de la page mobile le lit, y compris tourné d'un quart de tour.
 
 ## Scripts npm
 
@@ -221,4 +260,4 @@ npm run typecheck
 
 ## Hors périmètre de cette version
 
-Côté client mobile, temps réel (WebSocket), prêts, réservations et comptes utilisateurs. Le client desktop ne propose pour l'instant que la recherche et la localisation. L'API permet déjà la gestion des emplacements, l'ajout d'exemplaires et l'enregistrement des détections, qui pourront être ajoutés au client sans modifier le serveur.
+Côté client mobile autonome, temps réel (WebSocket), prêts, réservations et comptes utilisateurs. Le client desktop couvre la recherche, la localisation et l'ajout de livres. L'API permet déjà la gestion des emplacements, la liste des exemplaires mal rangés et l'enregistrement des détections : ces écrans pourront être ajoutés au client sans modifier le serveur.
