@@ -6,16 +6,21 @@ export class LivreRepositoryEnMemoire implements LivreRepository {
   private readonly donnees = new Map<string, LivreSnapshot>();
 
   constructor(initiaux: readonly Livre[] = []) {
-    initiaux.forEach((l) => this.donnees.set(l.isbn.valeur, l.versSnapshot()));
+    initiaux.forEach((l) => this.donnees.set(l.id, l.versSnapshot()));
+  }
+
+  async trouverParId(id: string): Promise<Livre | null> {
+    const s = this.donnees.get(id);
+    return s ? Livre.reconstituer(s) : null;
   }
 
   async trouverParIsbn(isbn: Isbn): Promise<Livre | null> {
-    const s = this.donnees.get(isbn.valeur);
+    const s = [...this.donnees.values()].find((l) => l.isbn === isbn.valeur);
     return s ? Livre.reconstituer(s) : null;
   }
 
   async enregistrer(livre: Livre): Promise<void> {
-    this.donnees.set(livre.isbn.valeur, livre.versSnapshot());
+    this.donnees.set(livre.id, livre.versSnapshot());
   }
 
   /** Accès synchrone réservé aux autres fakes (jointure livre ↔ exemplaire). */

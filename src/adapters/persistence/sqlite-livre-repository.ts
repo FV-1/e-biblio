@@ -5,7 +5,8 @@ import type { LivreRepository } from '../../ports/livre-repository.js';
 import type { BaseSqlite } from './connexion.js';
 
 interface LigneLivre {
-  isbn: string;
+  id: string;
+  isbn: string | null;
   titre: string;
   auteurs: string;
   couverture: string | null;
@@ -21,20 +22,28 @@ export function texteRecherche(livre: Livre): string {
   return [livre.titre, ...livre.auteurs].map(normaliserPourRecherche).join('\n');
 }
 
+const COLONNES = 'id, isbn, titre, auteurs, couverture';
+
 export class SqliteLivreRepository implements LivreRepository {
   private readonly requetes;
 
   constructor(db: BaseSqlite) {
     this.requetes = {
-      parIsbn: db.prepare<[string], LigneLivre>('SELECT isbn, titre, auteurs, couverture FROM livres WHERE isbn = ?'),
+      parId: db.prepare<[string], LigneLivre>(`SELECT ${COLONNES} FROM livres WHERE id = ?`),
+      parIsbn: db.prepare<[string], LigneLivre>(`SELECT ${COLONNES} FROM livres WHERE isbn = ?`),
       upsert: db.prepare<[LigneLivre & { texte_recherche: string }]>(`
-        INSERT INTO livres (isbn, titre, auteurs, couverture, texte_recherche)
-        VALUES (@isbn, @titre, @auteurs, @couverture, @texte_recherche)
-        ON CONFLICT (isbn) DO UPDATE SET
-          titre = excluded.titre, auteurs = excluded.auteurs,
+        INSERT INTO livres (id, isbn, titre, auteurs, couverture, texte_recherche)
+        VALUES (@id, @isbn, @titre, @auteurs, @couverture, @texte_recherche)
+        ON CONFLICT (id) DO UPDATE SET
+          isbn = excluded.isbn, titre = excluded.titre, auteurs = excluded.auteurs,
           couverture = excluded.couverture, texte_recherche = excluded.texte_recherche
       `),
     };
+  }
+
+  async trouverParId(id: string): Promise<Livre | null> {
+    const ligne = this.requetes.parId.get(id);
+    return ligne ? versEntite(ligne) : null;
   }
 
   async trouverParIsbn(isbn: Isbn): Promise<Livre | null> {
@@ -45,6 +54,7 @@ export class SqliteLivreRepository implements LivreRepository {
   async enregistrer(livre: Livre): Promise<void> {
     const s = livre.versSnapshot();
     this.requetes.upsert.run({
+      id: s.id,
       isbn: s.isbn,
       titre: s.titre,
       auteurs: JSON.stringify(s.auteurs),
@@ -56,6 +66,7 @@ export class SqliteLivreRepository implements LivreRepository {
 
 function versEntite(ligne: LigneLivre): Livre {
   return Livre.reconstituer({
+    id: ligne.id,
     isbn: ligne.isbn,
     titre: ligne.titre,
     auteurs: JSON.parse(ligne.auteurs) as string[],

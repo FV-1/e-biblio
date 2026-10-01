@@ -17,6 +17,7 @@ import { AjouterExemplaire } from './application/exemplaires/ajouter-exemplaire.
 import { ConsulterExemplaire } from './application/exemplaires/consulter-exemplaire.js';
 import { ListerExemplairesMalRanges } from './application/exemplaires/lister-exemplaires-mal-ranges.js';
 import { RechercherExemplaires } from './application/exemplaires/rechercher-exemplaires.js';
+import { ConsulterNotice } from './application/livres/consulter-notice.js';
 import { chargerConfig } from './config.js';
 
 /**
@@ -54,6 +55,9 @@ function main(): void {
       rechercher: new RechercherExemplaires(exemplaires, livres, emplacements),
       consulter: new ConsulterExemplaire(exemplaires, livres, emplacements),
       listerMalRanges: new ListerExemplairesMalRanges(exemplaires, livres, emplacements),
+    },
+    livres: {
+      consulterNotice: new ConsulterNotice(livres, catalogue),
     },
     detections: {
       enregistrer: new EnregistrerDetection(exemplaires, livres, emplacements, publisher, horloge),

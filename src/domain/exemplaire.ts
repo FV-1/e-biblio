@@ -1,7 +1,7 @@
 import type { Emplacement } from './emplacement.js';
 import { ErreurValidation } from './erreurs.js';
 import type { ExemplaireDetecte } from './evenements.js';
-import { Isbn } from './isbn.js';
+import type { Livre } from './livre.js';
 import { texteObligatoire } from './texte.js';
 
 /** Position constatée lors du dernier scan. */
@@ -12,14 +12,14 @@ export interface Detection {
 
 export interface ExemplaireSnapshot {
   readonly id: string;
-  readonly isbn: string;
+  readonly livreId: string;
   readonly emplacementId: string;
   readonly derniereDetection: Detection | null;
 }
 
 export interface NouvelExemplaire {
   readonly id: string;
-  readonly isbn: Isbn;
+  readonly livre: Livre;
   readonly emplacement: Emplacement;
 }
 
@@ -31,20 +31,25 @@ export interface NouvelExemplaire {
 export class Exemplaire {
   private constructor(
     readonly id: string,
-    readonly isbn: Isbn,
+    readonly livreId: string,
     readonly emplacementId: string,
     private _derniereDetection: Detection | null,
   ) {}
 
   static creer(donnees: NouvelExemplaire): Exemplaire {
     verifierRangeable(donnees.emplacement);
-    return new Exemplaire(texteObligatoire(donnees.id, 'id'), donnees.isbn, donnees.emplacement.id, null);
+    return new Exemplaire(texteObligatoire(donnees.id, 'id'), donnees.livre.id, donnees.emplacement.id, null);
+  }
+
+  /** Règle de rangement, exposée pour pouvoir la vérifier avant de construire l'exemplaire. */
+  static verifierRangeable(emplacement: Emplacement): void {
+    verifierRangeable(emplacement);
   }
 
   static reconstituer(snapshot: ExemplaireSnapshot): Exemplaire {
     return new Exemplaire(
       snapshot.id,
-      Isbn.creer(snapshot.isbn),
+      snapshot.livreId,
       snapshot.emplacementId,
       snapshot.derniereDetection ? copierDetection(snapshot.derniereDetection) : null,
     );
@@ -69,7 +74,7 @@ export class Exemplaire {
     return {
       type: 'ExemplaireDetecte',
       exemplaireId: this.id,
-      isbn: this.isbn.valeur,
+      livreId: this.livreId,
       emplacementDetecteId: emplacement.id,
       emplacementTheoriqueId: this.emplacementId,
       malRange: this.estMalRange(),
@@ -80,7 +85,7 @@ export class Exemplaire {
   versSnapshot(): ExemplaireSnapshot {
     return {
       id: this.id,
-      isbn: this.isbn.valeur,
+      livreId: this.livreId,
       emplacementId: this.emplacementId,
       derniereDetection: this.derniereDetection,
     };

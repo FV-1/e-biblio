@@ -130,6 +130,37 @@ Content-Type: application/json
   "couverture": null
 }
 
+### Ajout entièrement manuel, SANS ISBN (ouvrage ancien, document interne…)
+# @name ajoutSansIsbn
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "emplacementId": "etagere-2-2-1",
+  "titre": "Registre paroissial de 1789",
+  "auteurs": ["Anonyme"]
+}
+
+### Nouvel exemplaire d'un livre déjà enregistré (avec ou sans ISBN), via son livreId
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "emplacementId": "etagere-2-2-2",
+  "livreId": "{{ajoutSansIsbn.response.body.livreId}}"
+}
+
+### Aperçu de la notice d'un ISBN, sans rien enregistrer (base ou Open Library)
+GET {{baseUrl}}/livres/978-2-07-036822-8
+
+### [Erreur 400] Ni ISBN, ni titre, ni livreId
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "emplacementId": "etagere-1-1-1"
+}
+
 ### [Erreur 422 CATALOGUE_INDISPONIBLE / LIVRE_INCONNU_DU_CATALOGUE]
 ### Pour simuler une panne : relancer le serveur avec OPEN_LIBRARY_URL=http://127.0.0.1:65530
 ### puis renvoyer la requête avec "titre" et "auteurs" (saisie manuelle).

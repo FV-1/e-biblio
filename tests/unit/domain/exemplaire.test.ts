@@ -2,30 +2,39 @@ import { describe, expect, it } from 'vitest';
 import { ErreurValidation } from '../../../src/domain/erreurs.js';
 import { Exemplaire } from '../../../src/domain/exemplaire.js';
 import { Isbn } from '../../../src/domain/isbn.js';
+import { Livre } from '../../../src/domain/livre.js';
 import { construireHierarchie } from '../../fixtures/hierarchie.js';
 
-const isbn = Isbn.creer('9780306406157');
+const livre = Livre.creer({ id: 'livre-1', isbn: Isbn.creer('9780306406157'), titre: 'Les Misérables', auteurs: [] });
 const date = new Date('2026-03-01T09:30:00.000Z');
 
 function exemplaireSurR1() {
   const h = construireHierarchie();
-  return { h, exemplaire: Exemplaire.creer({ id: 'ex-1', isbn, emplacement: h.etagere1 }) };
+  return { h, exemplaire: Exemplaire.creer({ id: 'ex-1', livre, emplacement: h.etagere1 }) };
 }
 
 describe('Exemplaire', () => {
   describe('création', () => {
-    it('est rangé sur une étagère, sans détection', () => {
+    it('est rangé sur une étagère, sans détection, et référence son livre', () => {
       const { exemplaire } = exemplaireSurR1();
       expect(exemplaire.emplacementId).toBe('etagere-r1');
+      expect(exemplaire.livreId).toBe('livre-1');
       expect(exemplaire.derniereDetection).toBeNull();
+    });
+
+    it('accepte un livre sans ISBN', () => {
+      const h = construireHierarchie();
+      const sansIsbn = Livre.creer({ id: 'livre-2', isbn: null, titre: 'Manuscrit', auteurs: [] });
+      expect(Exemplaire.creer({ id: 'ex', livre: sansIsbn, emplacement: h.etagere1 }).livreId).toBe('livre-2');
     });
 
     it.each(['etage', 'salle', 'rayon', 'niveau'] as const)('refuse un rangement sur un emplacement de type %s', (type) => {
       const h = construireHierarchie();
       const emplacement = h.tous.find((e) => e.type === type)!;
-      expect(() => Exemplaire.creer({ id: 'ex', isbn, emplacement })).toThrow(
+      expect(() => Exemplaire.creer({ id: 'ex', livre, emplacement })).toThrow(
         expect.objectContaining({ code: 'EMPLACEMENT_NON_RANGEABLE' }),
       );
+      expect(() => Exemplaire.verifierRangeable(emplacement)).toThrow(ErreurValidation);
     });
   });
 
@@ -67,7 +76,7 @@ describe('Exemplaire', () => {
       expect(exemplaire.enregistrerDetection(h.etagere2, date)).toEqual({
         type: 'ExemplaireDetecte',
         exemplaireId: 'ex-1',
-        isbn: '9780306406157',
+        livreId: 'livre-1',
         emplacementDetecteId: 'etagere-r2',
         emplacementTheoriqueId: 'etagere-r1',
         malRange: true,

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AjouterExemplaire, type CommandeAjouterExemplaire } from '../../../src/application/exemplaires/ajouter-exemplaire.js';
+import {
+  AjouterExemplaire,
+  type CommandeAjouterExemplaire,
+  type SaisieManuelleLivre,
+} from '../../../src/application/exemplaires/ajouter-exemplaire.js';
+import { ConsulterNotice } from '../../../src/application/livres/consulter-notice.js';
 import { ConsulterExemplaire } from '../../../src/application/exemplaires/consulter-exemplaire.js';
 import { ListerExemplairesMalRanges } from '../../../src/application/exemplaires/lister-exemplaires-mal-ranges.js';
 import { RechercherExemplaires } from '../../../src/application/exemplaires/rechercher-exemplaires.js';
@@ -15,94 +20,184 @@ describe('AjouterExemplaire', () => {
   const ajouter = () =>
     new AjouterExemplaire(ctx.exemplaires, ctx.livres, ctx.emplacements, ctx.catalogue, ctx.generateurId);
 
-  const commande = (surcharges: Partial<CommandeAjouterExemplaire> = {}): CommandeAjouterExemplaire => ({
-    isbn: ISBN_ZOLA.valeur,
-    emplacementId: 'etagere-r1',
-    saisieManuelle: null,
-    ...surcharges,
-  });
+  const parIsbn = (
+    isbn = ISBN_ZOLA.valeur,
+    saisieManuelle: SaisieManuelleLivre | null = null,
+    emplacementId = 'etagere-r1',
+  ): CommandeAjouterExemplaire => ({ emplacementId, livre: { type: 'isbn', isbn, saisieManuelle } });
 
-  it('récupère la notice depuis le catalogue externe et l’enregistre', async () => {
-    ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: ['Émile Zola'], couverture: 'https://c/1.jpg' });
+  const germinal: SaisieManuelleLivre = { titre: 'Germinal', auteurs: ['Zola'], couverture: null };
 
-    const { exemplaire, sourceLivre } = await ajouter().executer(commande());
+  describe('par ISBN', () => {
+    it('récupère la notice depuis le catalogue externe et l’enregistre', async () => {
+      ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: ['Émile Zola'], couverture: 'https://c/1.jpg' });
 
-    expect(sourceLivre).toBe('catalogue');
-    expect(exemplaire).toMatchObject({
-      id: 'gen-1',
-      isbn: ISBN_ZOLA.valeur,
-      livre: { titre: 'Germinal', auteurs: ['Émile Zola'], couverture: 'https://c/1.jpg' },
-      emplacementTheorique: { emplacementId: 'etagere-r1' },
-      derniereDetection: null,
-      malRange: false,
+      const { exemplaire, sourceLivre } = await ajouter().executer(parIsbn());
+
+      expect(sourceLivre).toBe('catalogue');
+      // gen-1 : id du nouveau livre (résolu en premier), gen-2 : id de l'exemplaire.
+      expect(exemplaire).toMatchObject({
+        id: 'gen-2',
+        livreId: 'gen-1',
+        isbn: ISBN_ZOLA.valeur,
+        livre: { id: 'gen-1', titre: 'Germinal', auteurs: ['Émile Zola'], couverture: 'https://c/1.jpg' },
+        emplacementTheorique: { emplacementId: 'etagere-r1' },
+        derniereDetection: null,
+        malRange: false,
+      });
+      expect(exemplaire.emplacementTheorique.localisation.libelle).toBe('Étage 1 > Salle A > Rayon Romans > Étagère R1');
+      expect((await ctx.livres.trouverParIsbn(ISBN_ZOLA))?.titre).toBe('Germinal');
+      expect(await ctx.exemplaires.trouverParId('gen-2')).not.toBeNull();
     });
-    expect(exemplaire.emplacementTheorique.localisation.libelle).toBe('Étage 1 > Salle A > Rayon Romans > Étagère R1');
-    expect((await ctx.livres.trouverParIsbn(ISBN_ZOLA))?.titre).toBe('Germinal');
-    expect(await ctx.exemplaires.trouverParId('gen-1')).not.toBeNull();
+
+    it('accepte un ISBN-10 avec tirets et le normalise', async () => {
+      ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: [], couverture: null });
+      const { exemplaire } = await ajouter().executer(parIsbn('0-8044-2957-X'));
+      expect(exemplaire.isbn).toBe('9780804429573');
+    });
+
+    it('réutilise le livre déjà connu en base, sans interroger le catalogue', async () => {
+      const { sourceLivre, exemplaire } = await ajouter().executer(parIsbn(ISBN_HUGO.valeur));
+      expect(sourceLivre).toBe('base');
+      expect(exemplaire.livreId).toBe('livre-hugo');
+      expect(ctx.catalogue.appels).toEqual([]);
+    });
+
+    it('le livre déjà en base prime sur une saisie manuelle (pas de doublon d’ISBN)', async () => {
+      const { sourceLivre, exemplaire } = await ajouter().executer(parIsbn(ISBN_HUGO.valeur, germinal));
+      expect(sourceLivre).toBe('base');
+      expect(exemplaire.livre.titre).toBe('Les Misérables');
+    });
+
+    it('utilise la saisie manuelle sans interroger le catalogue', async () => {
+      const { sourceLivre, exemplaire } = await ajouter().executer(parIsbn(undefined, germinal));
+      expect(sourceLivre).toBe('saisie');
+      expect(exemplaire).toMatchObject({ isbn: ISBN_ZOLA.valeur, livre: { titre: 'Germinal' } });
+      expect(ctx.catalogue.appels).toEqual([]);
+    });
+
+    it('catalogue hors ligne sans saisie : erreur CATALOGUE_INDISPONIBLE, rien n’est persisté', async () => {
+      ctx.catalogue.mettreHorsLigne();
+      await expect(ajouter().executer(parIsbn())).rejects.toThrow(
+        expect.objectContaining({ code: 'CATALOGUE_INDISPONIBLE' }),
+      );
+      expect(await ctx.livres.trouverParIsbn(ISBN_ZOLA)).toBeNull();
+      expect(await ctx.exemplaires.rechercher('9780804429573')).toEqual([]);
+    });
+
+    it('catalogue hors ligne puis renvoi avec saisie manuelle : l’ajout aboutit sans bloquer', async () => {
+      ctx.catalogue.mettreHorsLigne();
+      await expect(ajouter().executer(parIsbn())).rejects.toThrow(ErreurValidation);
+      expect((await ajouter().executer(parIsbn(undefined, germinal))).sourceLivre).toBe('saisie');
+    });
+
+    it('ISBN inconnu du catalogue : erreur LIVRE_INCONNU_DU_CATALOGUE', async () => {
+      await expect(ajouter().executer(parIsbn())).rejects.toThrow(
+        expect.objectContaining({ code: 'LIVRE_INCONNU_DU_CATALOGUE' }),
+      );
+    });
+
+    it('valide ISBN, emplacement et type de rangement AVANT d’appeler le catalogue', async () => {
+      await expect(ajouter().executer(parIsbn('123'))).rejects.toThrow(
+        expect.objectContaining({ code: 'ISBN_INVALIDE' }),
+      );
+      await expect(ajouter().executer(parIsbn(undefined, null, 'fantome'))).rejects.toThrow(ErreurIntrouvable);
+      await expect(ajouter().executer(parIsbn(undefined, null, 'rayon-romans'))).rejects.toThrow(
+        expect.objectContaining({ code: 'EMPLACEMENT_NON_RANGEABLE' }),
+      );
+      expect(ctx.catalogue.appels).toEqual([]);
+    });
+
+    it('refuse une saisie manuelle sans titre', async () => {
+      await expect(
+        ajouter().executer(parIsbn(undefined, { titre: ' ', auteurs: [], couverture: null })),
+      ).rejects.toThrow(expect.objectContaining({ code: 'CHAMP_OBLIGATOIRE' }));
+    });
   });
 
-  it('accepte un ISBN-10 avec tirets et le normalise', async () => {
-    ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: [], couverture: null });
-    const { exemplaire } = await ajouter().executer(commande({ isbn: '0-8044-2957-X' }));
-    expect(exemplaire.isbn).toBe('9780804429573');
+  describe('entièrement manuel, sans ISBN', () => {
+    const manuel = (titre = 'Registre paroissial 1789'): CommandeAjouterExemplaire => ({
+      emplacementId: 'etagere-r2',
+      livre: { type: 'manuel', saisieManuelle: { titre, auteurs: ['Anonyme'], couverture: null } },
+    });
+
+    it('crée un livre sans ISBN et son exemplaire, sans interroger le catalogue', async () => {
+      const { exemplaire, sourceLivre } = await ajouter().executer(manuel());
+
+      expect(sourceLivre).toBe('saisie');
+      expect(exemplaire).toMatchObject({ isbn: null, livre: { isbn: null, titre: 'Registre paroissial 1789' } });
+      expect((await ctx.livres.trouverParId(exemplaire.livreId))?.isbn).toBeNull();
+      expect(ctx.catalogue.appels).toEqual([]);
+    });
+
+    it('rend le livre trouvable par la recherche', async () => {
+      await ajouter().executer(manuel());
+      const resultats = await new RechercherExemplaires(ctx.exemplaires, ctx.livres, ctx.emplacements).executer('paroissial');
+      expect(resultats.map((r) => r.livre.titre)).toEqual(['Registre paroissial 1789']);
+    });
+
+    it('refuse une saisie sans titre', async () => {
+      await expect(ajouter().executer(manuel('  '))).rejects.toThrow(ErreurValidation);
+    });
   });
 
-  it('n’interroge pas le catalogue si le livre est déjà connu en base', async () => {
-    const { sourceLivre, exemplaire } = await ajouter().executer(commande({ isbn: ISBN_HUGO.valeur }));
-    expect(sourceLivre).toBe('base');
-    expect(exemplaire.livre.titre).toBe('Les Misérables');
+  describe('nouvel exemplaire d’un livre existant', () => {
+    it('réutilise le livre, sans catalogue ni nouvelle notice', async () => {
+      const premier = await ajouter().executer({
+        emplacementId: 'etagere-r1',
+        livre: { type: 'manuel', saisieManuelle: { titre: 'Manuscrit', auteurs: [], couverture: null } },
+      });
+      const second = await ajouter().executer({
+        emplacementId: 'etagere-r2',
+        livre: { type: 'existant', livreId: premier.exemplaire.livreId },
+      });
+
+      expect(second.sourceLivre).toBe('base');
+      expect(second.exemplaire.livreId).toBe(premier.exemplaire.livreId);
+      expect(second.exemplaire.id).not.toBe(premier.exemplaire.id);
+      expect(ctx.catalogue.appels).toEqual([]);
+    });
+
+    it('échoue si le livre n’existe pas', async () => {
+      await expect(
+        ajouter().executer({ emplacementId: 'etagere-r1', livre: { type: 'existant', livreId: 'fantome' } }),
+      ).rejects.toThrow(expect.objectContaining({ code: 'LIVRE_INTROUVABLE' }));
+    });
+  });
+});
+
+describe('ConsulterNotice', () => {
+  const consulter = () => new ConsulterNotice(ctx.livres, ctx.catalogue);
+
+  it('renvoie la notice du livre déjà en base (avec son id), sans appel externe', async () => {
+    expect(await consulter().executer('0-306-40615-2')).toEqual({
+      source: 'base',
+      livre: { id: 'livre-hugo', isbn: '9780306406157', titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: null },
+    });
     expect(ctx.catalogue.appels).toEqual([]);
   });
 
-  it('utilise la saisie manuelle sans interroger le catalogue', async () => {
-    const { sourceLivre, exemplaire } = await ajouter().executer(
-      commande({ saisieManuelle: { titre: 'Germinal', auteurs: ['Zola'], couverture: null } }),
-    );
-    expect(sourceLivre).toBe('saisie');
-    expect(exemplaire.livre.titre).toBe('Germinal');
-    expect(ctx.catalogue.appels).toEqual([]);
+  it('renvoie la notice du catalogue sans rien enregistrer', async () => {
+    ctx.catalogue.connaitre(ISBN_ZOLA, { titre: 'Germinal', auteurs: ['Émile Zola'], couverture: null });
+    expect(await consulter().executer(ISBN_ZOLA.valeur)).toEqual({
+      source: 'catalogue',
+      livre: { id: null, isbn: ISBN_ZOLA.valeur, titre: 'Germinal', auteurs: ['Émile Zola'], couverture: null },
+    });
+    expect(await ctx.livres.trouverParIsbn(ISBN_ZOLA)).toBeNull();
   });
 
-  it('catalogue hors ligne sans saisie : erreur CATALOGUE_INDISPONIBLE, rien n’est persisté', async () => {
+  it.each([
+    ['123', 'ISBN_INVALIDE'],
+    [ISBN_ZOLA.valeur, 'LIVRE_INCONNU_DU_CATALOGUE'],
+  ])('échoue explicitement pour %s (%s)', async (isbn, code) => {
+    await expect(consulter().executer(isbn)).rejects.toThrow(expect.objectContaining({ code }));
+  });
+
+  it('signale un catalogue indisponible', async () => {
     ctx.catalogue.mettreHorsLigne();
-    await expect(ajouter().executer(commande())).rejects.toThrow(
+    await expect(consulter().executer(ISBN_ZOLA.valeur)).rejects.toThrow(
       expect.objectContaining({ code: 'CATALOGUE_INDISPONIBLE' }),
     );
-    expect(await ctx.livres.trouverParIsbn(ISBN_ZOLA)).toBeNull();
-    expect(await ctx.exemplaires.rechercher('9780804429573')).toEqual([]);
-  });
-
-  it('catalogue hors ligne puis renvoi avec saisie manuelle : l’ajout aboutit sans bloquer', async () => {
-    ctx.catalogue.mettreHorsLigne();
-    await expect(ajouter().executer(commande())).rejects.toThrow(ErreurValidation);
-
-    const { sourceLivre } = await ajouter().executer(
-      commande({ saisieManuelle: { titre: 'Germinal', auteurs: ['Zola'], couverture: null } }),
-    );
-    expect(sourceLivre).toBe('saisie');
-  });
-
-  it('ISBN inconnu du catalogue : erreur LIVRE_INCONNU_DU_CATALOGUE', async () => {
-    await expect(ajouter().executer(commande())).rejects.toThrow(
-      expect.objectContaining({ code: 'LIVRE_INCONNU_DU_CATALOGUE' }),
-    );
-  });
-
-  it('valide ISBN, emplacement et type de rangement AVANT d’appeler le catalogue', async () => {
-    await expect(ajouter().executer(commande({ isbn: '123' }))).rejects.toThrow(
-      expect.objectContaining({ code: 'ISBN_INVALIDE' }),
-    );
-    await expect(ajouter().executer(commande({ emplacementId: 'fantome' }))).rejects.toThrow(ErreurIntrouvable);
-    await expect(ajouter().executer(commande({ emplacementId: 'rayon-romans' }))).rejects.toThrow(
-      expect.objectContaining({ code: 'EMPLACEMENT_NON_RANGEABLE' }),
-    );
-    expect(ctx.catalogue.appels).toEqual([]);
-  });
-
-  it('refuse une saisie manuelle sans titre', async () => {
-    await expect(
-      ajouter().executer(commande({ saisieManuelle: { titre: ' ', auteurs: [], couverture: null } })),
-    ).rejects.toThrow(expect.objectContaining({ code: 'CHAMP_OBLIGATOIRE' }));
   });
 });
 

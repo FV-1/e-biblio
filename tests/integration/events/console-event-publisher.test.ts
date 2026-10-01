@@ -7,7 +7,7 @@ describe('ConsoleEventPublisher', () => {
     await new ConsoleEventPublisher((l) => lignes.push(l)).publier({
       type: 'ExemplaireDetecte',
       exemplaireId: 'ex-1',
-      isbn: '9780306406157',
+      livreId: 'livre-1',
       emplacementDetecteId: 'etagere-2',
       emplacementTheoriqueId: 'etagere-1',
       malRange: true,

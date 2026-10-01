@@ -6,7 +6,7 @@ import { Livre } from '../../../src/domain/livre.js';
 const isbn = Isbn.creer('9780306406157');
 
 function livre(surcharges: Partial<Parameters<typeof Livre.creer>[0]> = {}): Livre {
-  return Livre.creer({ isbn, titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: null, ...surcharges });
+  return Livre.creer({ id: 'livre-1', isbn, titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: null, ...surcharges });
 }
 
 describe('Livre', () => {
@@ -44,5 +44,26 @@ describe('Livre', () => {
   it('se reconstitue à l’identique depuis son snapshot', () => {
     const l = livre({ couverture: 'https://covers.example/1.jpg' });
     expect(Livre.reconstituer(l.versSnapshot()).versSnapshot()).toEqual(l.versSnapshot());
+  });
+
+  it('exige un identifiant', () => {
+    expect(() => livre({ id: ' ' })).toThrow(ErreurValidation);
+  });
+
+  describe('sans ISBN', () => {
+    const sansIsbn = () => livre({ isbn: null, titre: 'Registre paroissial 1789' });
+
+    it('est accepté et se reconstitue à l’identique', () => {
+      const l = sansIsbn();
+      expect(l.isbn).toBeNull();
+      expect(Livre.reconstituer(l.versSnapshot()).versSnapshot()).toEqual(l.versSnapshot());
+    });
+
+    it('reste trouvable par titre et auteur, jamais par un ISBN', () => {
+      expect(sansIsbn().correspond('paroissial')).toBe(true);
+      expect(sansIsbn().correspond('hugo')).toBe(true);
+      expect(sansIsbn().correspond('978-0-306')).toBe(false);
+      expect(sansIsbn().correspond('0306406152')).toBe(false);
+    });
   });
 });

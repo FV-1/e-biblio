@@ -23,7 +23,8 @@ export interface VueDetailEmplacement extends VueEmplacement {
 }
 
 export interface VueLivre {
-  readonly isbn: string;
+  readonly id: string;
+  readonly isbn: string | null;
   readonly titre: string;
   readonly auteurs: readonly string[];
   readonly couverture: string | null;
@@ -36,7 +37,8 @@ export interface VuePosition {
 
 export interface VueExemplaire {
   readonly id: string;
-  readonly isbn: string;
+  readonly livreId: string;
+  readonly isbn: string | null;
   readonly livre: VueLivre;
   /** Position théorique : où l'exemplaire doit être rangé. */
   readonly emplacementTheorique: VuePosition;
@@ -52,5 +54,5 @@ export function vueEmplacement(emplacement: Emplacement): VueEmplacement {
 
 export function vueLivre(livre: Livre): VueLivre {
   const s = livre.versSnapshot();
-  return { isbn: s.isbn, titre: s.titre, auteurs: s.auteurs, couverture: s.couverture };
+  return { id: s.id, isbn: s.isbn, titre: s.titre, auteurs: s.auteurs, couverture: s.couverture };
 }

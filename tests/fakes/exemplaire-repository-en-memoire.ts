@@ -23,8 +23,8 @@ export class ExemplaireRepositoryEnMemoire implements ExemplaireRepository {
   }
 
   async rechercher(terme: string): Promise<Exemplaire[]> {
-    const isbnsCorrespondants = new Set(this.livres.tous().filter((l) => l.correspond(terme)).map((l) => l.isbn.valeur));
-    return this.tous().filter((e) => isbnsCorrespondants.has(e.isbn.valeur));
+    const livresCorrespondants = new Set(this.livres.tous().filter((l) => l.correspond(terme)).map((l) => l.id));
+    return this.tous().filter((e) => livresCorrespondants.has(e.livreId));
   }
 
   async trouverMalRanges(): Promise<Exemplaire[]> {

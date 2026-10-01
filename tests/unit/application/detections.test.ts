@@ -30,7 +30,7 @@ describe('EnregistrerDetection', () => {
       {
         type: 'ExemplaireDetecte',
         exemplaireId: 'ex-hugo',
-        isbn: '9780306406157',
+        livreId: 'livre-hugo',
         emplacementDetecteId: 'etagere-r2',
         emplacementTheoriqueId: 'etagere-r1',
         malRange: true,

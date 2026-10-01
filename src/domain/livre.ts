@@ -2,23 +2,31 @@ import { Isbn } from './isbn.js';
 import { normaliserPourRecherche, texteObligatoire } from './texte.js';
 
 export interface LivreSnapshot {
-  readonly isbn: string;
+  readonly id: string;
+  readonly isbn: string | null;
   readonly titre: string;
   readonly auteurs: readonly string[];
   readonly couverture: string | null;
 }
 
 export interface NouveauLivre {
-  readonly isbn: Isbn;
+  readonly id: string;
+  /** Facultatif : ouvrages anciens, documents internes… n'ont pas toujours d'ISBN. */
+  readonly isbn: Isbn | null;
   readonly titre: string;
   readonly auteurs: readonly string[];
   readonly couverture?: string | null;
 }
 
-/** Notice bibliographique, partagée par tous les exemplaires d'un même ISBN. Immuable. */
+/**
+ * Notice bibliographique, partagée par tous les exemplaires d'un même ouvrage. Immuable.
+ * Son identité est un identifiant interne : l'ISBN, quand il existe, est un attribut
+ * (unique) qui permet de retrouver la notice, pas son identité.
+ */
 export class Livre {
   private constructor(
-    readonly isbn: Isbn,
+    readonly id: string,
+    readonly isbn: Isbn | null,
     readonly titre: string,
     readonly auteurs: readonly string[],
     readonly couverture: string | null,
@@ -29,11 +37,23 @@ export class Livre {
       .map((a) => a.trim().replace(/\s+/g, ' '))
       .filter((a, i, tous) => a.length > 0 && tous.indexOf(a) === i);
     const couverture = donnees.couverture?.trim() || null;
-    return new Livre(donnees.isbn, texteObligatoire(donnees.titre, 'titre', 500), auteurs, couverture);
+    return new Livre(
+      texteObligatoire(donnees.id, 'id'),
+      donnees.isbn,
+      texteObligatoire(donnees.titre, 'titre', 500),
+      auteurs,
+      couverture,
+    );
   }
 
   static reconstituer(snapshot: LivreSnapshot): Livre {
-    return new Livre(Isbn.creer(snapshot.isbn), snapshot.titre, [...snapshot.auteurs], snapshot.couverture);
+    return new Livre(
+      snapshot.id,
+      snapshot.isbn === null ? null : Isbn.creer(snapshot.isbn),
+      snapshot.titre,
+      [...snapshot.auteurs],
+      snapshot.couverture,
+    );
   }
 
   /**
@@ -47,12 +67,18 @@ export class Livre {
     return (
       normaliserPourRecherche(this.titre).includes(t) ||
       this.auteurs.some((a) => normaliserPourRecherche(a).includes(t)) ||
-      (termeIsbn.length > 0 && this.isbn.valeur.includes(termeIsbn))
+      (this.isbn !== null && termeIsbn.length > 0 && this.isbn.valeur.includes(termeIsbn))
     );
   }
 
   versSnapshot(): LivreSnapshot {
-    return { isbn: this.isbn.valeur, titre: this.titre, auteurs: [...this.auteurs], couverture: this.couverture };
+    return {
+      id: this.id,
+      isbn: this.isbn?.valeur ?? null,
+      titre: this.titre,
+      auteurs: [...this.auteurs],
+      couverture: this.couverture,
+    };
   }
 }
 

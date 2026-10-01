@@ -27,13 +27,14 @@ export class PresentateurExemplaires {
     const vues: VueExemplaire[] = [];
 
     for (const exemplaire of exemplaires) {
-      const livre = livres.get(exemplaire.isbn.valeur) ?? (await this.chargerLivre(exemplaire));
-      livres.set(livre.isbn.valeur, livre);
+      const livre = livres.get(exemplaire.livreId) ?? (await this.chargerLivre(exemplaire));
+      livres.set(livre.id, livre);
 
       const detection = exemplaire.derniereDetection;
       vues.push({
         id: exemplaire.id,
-        isbn: exemplaire.isbn.valeur,
+        livreId: livre.id,
+        isbn: livre.isbn?.valeur ?? null,
         livre: vueLivre(livre),
         emplacementTheorique: {
           emplacementId: exemplaire.emplacementId,
@@ -53,8 +54,8 @@ export class PresentateurExemplaires {
   }
 
   private async chargerLivre(exemplaire: Exemplaire): Promise<Livre> {
-    const livre = await this.livres.trouverParIsbn(exemplaire.isbn);
-    if (!livre) throw new Error(`Livre ${exemplaire.isbn.valeur} absent pour l'exemplaire « ${exemplaire.id} »`);
+    const livre = await this.livres.trouverParId(exemplaire.livreId);
+    if (!livre) throw new Error(`Livre « ${exemplaire.livreId} » absent pour l'exemplaire « ${exemplaire.id} »`);
     return livre;
   }
 }

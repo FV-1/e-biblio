@@ -1,4 +1,4 @@
-import { ErreurValidation } from '../../domain/erreurs.js';
+import { ErreurIntrouvable } from '../../domain/erreurs.js';
 import { Exemplaire } from '../../domain/exemplaire.js';
 import { Isbn } from '../../domain/isbn.js';
 import { Livre } from '../../domain/livre.js';
@@ -9,6 +9,7 @@ import type { GenerateurId } from '../../ports/generateur-id.js';
 import type { LivreRepository } from '../../ports/livre-repository.js';
 import { chargerEmplacement } from '../commun/chargement.js';
 import { PresentateurExemplaires } from '../commun/presentateur-exemplaires.js';
+import { ResolveurNotice } from '../commun/resolveur-notice.js';
 import type { VueExemplaire } from '../commun/vues.js';
 
 export interface SaisieManuelleLivre {
@@ -17,11 +18,18 @@ export interface SaisieManuelleLivre {
   readonly couverture: string | null;
 }
 
+/** Trois façons de désigner le livre dont on ajoute un exemplaire. */
+export type LivreAAjouter =
+  /** Par ISBN : notice en base ou catalogue ; la saisie manuelle, si fournie, évite le catalogue. */
+  | { readonly type: 'isbn'; readonly isbn: string; readonly saisieManuelle: SaisieManuelleLivre | null }
+  /** Entièrement manuel, sans ISBN (ouvrage ancien, document interne…). */
+  | { readonly type: 'manuel'; readonly saisieManuelle: SaisieManuelleLivre }
+  /** Nouvel exemplaire d'un livre déjà enregistré (avec ou sans ISBN). */
+  | { readonly type: 'existant'; readonly livreId: string };
+
 export interface CommandeAjouterExemplaire {
-  readonly isbn: string;
   readonly emplacementId: string;
-  /** Notice saisie à la main ; si présente, le catalogue externe n'est pas interrogé. */
-  readonly saisieManuelle: SaisieManuelleLivre | null;
+  readonly livre: LivreAAjouter;
 }
 
 /** D'où vient la notice du livre : déjà en base, catalogue externe ou saisie manuelle. */
@@ -32,34 +40,30 @@ export interface ResultatAjoutExemplaire {
   readonly sourceLivre: SourceLivre;
 }
 
-/**
- * Ajout d'un exemplaire par ISBN. Ordre de résolution de la notice :
- *   1. livre déjà connu en base → aucun appel externe
- *   2. saisie manuelle fournie → utilisée telle quelle
- *   3. sinon, interrogation du catalogue externe ; s'il est indisponible ou ne
- *      connaît pas l'ISBN, erreur explicite invitant à renvoyer une saisie manuelle.
- */
 export class AjouterExemplaire {
   private readonly presentateur: PresentateurExemplaires;
+  private readonly resolveur: ResolveurNotice;
 
   constructor(
     private readonly exemplaires: ExemplaireRepository,
     private readonly livres: LivreRepository,
     private readonly emplacements: EmplacementRepository,
-    private readonly catalogue: CatalogueExterne,
+    catalogue: CatalogueExterne,
     private readonly generateurId: GenerateurId,
   ) {
     this.presentateur = new PresentateurExemplaires(livres, emplacements);
+    this.resolveur = new ResolveurNotice(livres, catalogue);
   }
 
   async executer(commande: CommandeAjouterExemplaire): Promise<ResultatAjoutExemplaire> {
-    const isbn = Isbn.creer(commande.isbn);
-    // ISBN, emplacement et règles de rangement sont validés AVANT tout appel
+    // Tout ce qui peut être validé localement l'est AVANT un éventuel appel
     // réseau : inutile d'interroger le catalogue pour une requête vouée à l'échec.
+    const isbn = commande.livre.type === 'isbn' ? Isbn.creer(commande.livre.isbn) : null;
     const emplacement = await chargerEmplacement(this.emplacements, commande.emplacementId);
-    const exemplaire = Exemplaire.creer({ id: this.generateurId.generer(), isbn, emplacement });
+    Exemplaire.verifierRangeable(emplacement);
 
-    const { livre, source } = await this.resoudreLivre(isbn, commande.saisieManuelle);
+    const { livre, source } = await this.obtenirLivre(commande.livre, isbn);
+    const exemplaire = Exemplaire.creer({ id: this.generateurId.generer(), livre, emplacement });
 
     if (source !== 'base') await this.livres.enregistrer(livre);
     await this.exemplaires.enregistrer(exemplaire);
@@ -67,29 +71,31 @@ export class AjouterExemplaire {
     return { exemplaire: await this.presentateur.presenter(exemplaire), sourceLivre: source };
   }
 
-  private async resoudreLivre(
-    isbn: Isbn,
-    saisie: SaisieManuelleLivre | null,
-  ): Promise<{ livre: Livre; source: SourceLivre }> {
-    const connu = await this.livres.trouverParIsbn(isbn);
-    if (connu) return { livre: connu, source: 'base' };
+  private async obtenirLivre(demande: LivreAAjouter, isbn: Isbn | null): Promise<{ livre: Livre; source: SourceLivre }> {
+    switch (demande.type) {
+      case 'existant': {
+        const livre = await this.livres.trouverParId(demande.livreId);
+        if (!livre) throw new ErreurIntrouvable('LIVRE_INTROUVABLE', `Livre « ${demande.livreId} » introuvable`);
+        return { livre, source: 'base' };
+      }
 
-    if (saisie) return { livre: Livre.creer({ isbn, ...saisie }), source: 'saisie' };
+      case 'manuel':
+        return { livre: this.nouveauLivre(null, demande.saisieManuelle), source: 'saisie' };
 
-    const resultat = await this.catalogue.rechercherParIsbn(isbn);
-    switch (resultat.statut) {
-      case 'trouve':
-        return { livre: Livre.creer({ isbn, ...resultat.livre }), source: 'catalogue' };
-      case 'introuvable':
-        throw new ErreurValidation(
-          'LIVRE_INCONNU_DU_CATALOGUE',
-          `L'ISBN ${isbn.valeur} est inconnu du catalogue : renvoyez la requête avec « titre » et « auteurs » pour une saisie manuelle`,
-        );
-      case 'indisponible':
-        throw new ErreurValidation(
-          'CATALOGUE_INDISPONIBLE',
-          `Le catalogue est indisponible (${resultat.raison}) : renvoyez la requête avec « titre » et « auteurs » pour une saisie manuelle`,
-        );
+      case 'isbn': {
+        const connu = await this.livres.trouverParIsbn(isbn!);
+        if (connu) return { livre: connu, source: 'base' };
+        if (demande.saisieManuelle) return { livre: this.nouveauLivre(isbn, demande.saisieManuelle), source: 'saisie' };
+
+        const notice = await this.resolveur.resoudre(isbn!);
+        return notice.source === 'base'
+          ? { livre: notice.livre, source: 'base' }
+          : { livre: this.nouveauLivre(isbn, notice.infos), source: 'catalogue' };
+      }
     }
+  }
+
+  private nouveauLivre(isbn: Isbn | null, notice: SaisieManuelleLivre): Livre {
+    return Livre.creer({ id: this.generateurId.generer(), isbn, ...notice });
   }
 }

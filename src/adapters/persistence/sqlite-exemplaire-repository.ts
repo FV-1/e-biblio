@@ -6,7 +6,7 @@ import type { BaseSqlite } from './connexion.js';
 
 interface LigneExemplaire {
   id: string;
-  isbn: string;
+  livre_id: string;
   emplacement_id: string;
   detection_emplacement_id: string | null;
   detection_date: string | null;
@@ -19,16 +19,16 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
     this.requetes = {
       parId: db.prepare<[string], LigneExemplaire>('SELECT * FROM exemplaires WHERE id = ?'),
       upsert: db.prepare<[LigneExemplaire]>(`
-        INSERT INTO exemplaires (id, isbn, emplacement_id, detection_emplacement_id, detection_date)
-        VALUES (@id, @isbn, @emplacement_id, @detection_emplacement_id, @detection_date)
+        INSERT INTO exemplaires (id, livre_id, emplacement_id, detection_emplacement_id, detection_date)
+        VALUES (@id, @livre_id, @emplacement_id, @detection_emplacement_id, @detection_date)
         ON CONFLICT (id) DO UPDATE SET
-          isbn = excluded.isbn, emplacement_id = excluded.emplacement_id,
+          livre_id = excluded.livre_id, emplacement_id = excluded.emplacement_id,
           detection_emplacement_id = excluded.detection_emplacement_id,
           detection_date = excluded.detection_date
       `),
       rechercher: db.prepare<[{ motif: string; motifIsbn: string | null }], LigneExemplaire>(`
         SELECT e.* FROM exemplaires e
-        JOIN livres l ON l.isbn = e.isbn
+        JOIN livres l ON l.id = e.livre_id
         WHERE l.texte_recherche LIKE @motif ESCAPE '\\'
            OR (@motifIsbn IS NOT NULL AND l.isbn LIKE @motifIsbn ESCAPE '\\')
         ORDER BY l.titre, e.id
@@ -56,7 +56,7 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
     const s = exemplaire.versSnapshot();
     this.requetes.upsert.run({
       id: s.id,
-      isbn: s.isbn,
+      livre_id: s.livreId,
       emplacement_id: s.emplacementId,
       detection_emplacement_id: s.derniereDetection?.emplacementId ?? null,
       detection_date: s.derniereDetection?.date.toISOString() ?? null,
@@ -89,7 +89,7 @@ function echapperLike(texte: string): string {
 function versEntite(ligne: LigneExemplaire): Exemplaire {
   return Exemplaire.reconstituer({
     id: ligne.id,
-    isbn: ligne.isbn,
+    livreId: ligne.livre_id,
     emplacementId: ligne.emplacement_id,
     derniereDetection:
       ligne.detection_emplacement_id !== null && ligne.detection_date !== null

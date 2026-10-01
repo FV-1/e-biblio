@@ -6,7 +6,7 @@
 export interface ExemplaireDetecte {
   readonly type: 'ExemplaireDetecte';
   readonly exemplaireId: string;
-  readonly isbn: string;
+  readonly livreId: string;
   readonly emplacementDetecteId: string;
   readonly emplacementTheoriqueId: string;
   readonly malRange: boolean;

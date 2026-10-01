@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { AjouterExemplaire } from '../../application/exemplaires/ajouter-exemplaire.js';
+import type { AjouterExemplaire, LivreAAjouter } from '../../application/exemplaires/ajouter-exemplaire.js';
 import type { ConsulterExemplaire } from '../../application/exemplaires/consulter-exemplaire.js';
 import type { ListerExemplairesMalRanges } from '../../application/exemplaires/lister-exemplaires-mal-ranges.js';
 import type { RechercherExemplaires } from '../../application/exemplaires/rechercher-exemplaires.js';
@@ -32,14 +32,19 @@ export function routesExemplaires(cas: CasUsageExemplaires): Router {
 
   router.post('/', async (req, res) => {
     const corps = corpsAjouterExemplaire.parse(req.body);
-    const resultat = await cas.ajouter.executer({
-      isbn: corps.isbn,
-      emplacementId: corps.emplacementId,
-      saisieManuelle:
-        corps.titre === undefined
-          ? null
-          : { titre: corps.titre, auteurs: corps.auteurs ?? [], couverture: corps.couverture ?? null },
-    });
+    const saisieManuelle =
+      corps.titre === undefined
+        ? null
+        : { titre: corps.titre, auteurs: corps.auteurs ?? [], couverture: corps.couverture ?? null };
+
+    const livre: LivreAAjouter =
+      corps.livreId !== undefined
+        ? { type: 'existant', livreId: corps.livreId }
+        : corps.isbn !== undefined
+          ? { type: 'isbn', isbn: corps.isbn, saisieManuelle }
+          : { type: 'manuel', saisieManuelle: saisieManuelle! };
+
+    const resultat = await cas.ajouter.executer({ emplacementId: corps.emplacementId, livre });
     res
       .status(201)
       .location(`/exemplaires/${encodeURIComponent(resultat.exemplaire.id)}`)

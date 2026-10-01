@@ -24,8 +24,10 @@ const ISBN_HUGO = Isbn.creer('9780306406157');
 const ISBN_ZOLA = Isbn.creer('080442957X');
 const ISBN_INCONNU = Isbn.creer('9782070368228');
 
-const hugo = Livre.creer({ isbn: ISBN_HUGO, titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: 'https://img/1.jpg' });
-const zola = Livre.creer({ isbn: ISBN_ZOLA, titre: 'Germinal', auteurs: ['Émile Zola', 'Préface_100%'], couverture: null });
+const hugo = Livre.creer({ id: 'livre-hugo', isbn: ISBN_HUGO, titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: 'https://img/1.jpg' });
+const zola = Livre.creer({ id: 'livre-zola', isbn: ISBN_ZOLA, titre: 'Germinal', auteurs: ['Émile Zola', 'Préface_100%'], couverture: null });
+const manuscrit = Livre.creer({ id: 'livre-manuscrit', isbn: null, titre: 'Registre paroissial 1789', auteurs: ['Anonyme'] });
+const archives = Livre.creer({ id: 'livre-archives', isbn: null, titre: 'Archives municipales', auteurs: [] });
 
 const ids = (liste: readonly { id: string }[]) => liste.map((e) => e.id).sort();
 
@@ -80,13 +82,26 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
         expect((await repos.livres.trouverParIsbn(Isbn.creer('9780804429573')))?.titre).toBe('Germinal');
       });
 
-      it('renvoie null pour un ISBN inconnu', async () => {
+      it('renvoie null pour un ISBN ou un id inconnu', async () => {
         expect(await repos.livres.trouverParIsbn(ISBN_INCONNU)).toBeNull();
+        expect(await repos.livres.trouverParId('inconnu')).toBeNull();
+      });
+
+      it('retrouve un livre par son id', async () => {
+        await repos.livres.enregistrer(hugo);
+        expect((await repos.livres.trouverParId('livre-hugo'))?.versSnapshot()).toEqual(hugo.versSnapshot());
+      });
+
+      it('accepte plusieurs livres sans ISBN', async () => {
+        await repos.livres.enregistrer(manuscrit);
+        await repos.livres.enregistrer(archives);
+        expect((await repos.livres.trouverParId('livre-manuscrit'))?.versSnapshot()).toEqual(manuscrit.versSnapshot());
+        expect((await repos.livres.trouverParId('livre-archives'))?.isbn).toBeNull();
       });
 
       it('met à jour un livre existant (upsert)', async () => {
         await repos.livres.enregistrer(hugo);
-        await repos.livres.enregistrer(Livre.creer({ isbn: ISBN_HUGO, titre: 'Titre corrigé', auteurs: [] }));
+        await repos.livres.enregistrer(Livre.creer({ id: 'livre-hugo', isbn: ISBN_HUGO, titre: 'Titre corrigé', auteurs: [] }));
         const relu = await repos.livres.trouverParIsbn(ISBN_HUGO);
         expect(relu?.titre).toBe('Titre corrigé');
         expect(relu?.auteurs).toEqual([]);
@@ -98,23 +113,25 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
       let bienRange: Exemplaire;
       let malRange: Exemplaire;
       let jamaisDetecte: Exemplaire;
+      let sansIsbn: Exemplaire;
 
       beforeEach(async () => {
-        await repos.livres.enregistrer(hugo);
-        await repos.livres.enregistrer(zola);
+        for (const l of [hugo, zola, manuscrit]) await repos.livres.enregistrer(l);
 
-        bienRange = Exemplaire.creer({ id: 'ex-bien', isbn: ISBN_HUGO, emplacement: h.etagere1 });
+        bienRange = Exemplaire.creer({ id: 'ex-bien', livre: hugo, emplacement: h.etagere1 });
         bienRange.enregistrerDetection(h.etagere1, date);
-        malRange = Exemplaire.creer({ id: 'ex-mal', isbn: ISBN_HUGO, emplacement: h.etagere1 });
+        malRange = Exemplaire.creer({ id: 'ex-mal', livre: hugo, emplacement: h.etagere1 });
         malRange.enregistrerDetection(h.etagere2, date);
-        jamaisDetecte = Exemplaire.creer({ id: 'ex-jamais', isbn: ISBN_ZOLA, emplacement: h.etagere1 });
+        jamaisDetecte = Exemplaire.creer({ id: 'ex-jamais', livre: zola, emplacement: h.etagere1 });
+        sansIsbn = Exemplaire.creer({ id: 'ex-manuscrit', livre: manuscrit, emplacement: h.etagere2 });
 
-        for (const e of [bienRange, malRange, jamaisDetecte]) await repos.exemplaires.enregistrer(e);
+        for (const e of [bienRange, malRange, jamaisDetecte, sansIsbn]) await repos.exemplaires.enregistrer(e);
       });
 
       it('restitue un exemplaire à l’identique (avec et sans détection)', async () => {
         expect((await repos.exemplaires.trouverParId('ex-mal'))?.versSnapshot()).toEqual(malRange.versSnapshot());
         expect((await repos.exemplaires.trouverParId('ex-jamais'))?.versSnapshot()).toEqual(jamaisDetecte.versSnapshot());
+        expect((await repos.exemplaires.trouverParId('ex-manuscrit'))?.livreId).toBe('livre-manuscrit');
         expect(await repos.exemplaires.trouverParId('inconnu')).toBeNull();
       });
 
@@ -138,7 +155,10 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
           ['97808044', ['ex-jamais']],
           ['0-8044-2957-X', ['ex-jamais']], // ISBN-10 complet converti en ISBN-13
           ['0306406152', ['ex-bien', 'ex-mal']],
-          ['e', ['ex-bien', 'ex-jamais', 'ex-mal']],
+          ['e', ['ex-bien', 'ex-jamais', 'ex-mal', 'ex-manuscrit']],
+          ['paroissial', ['ex-manuscrit']], // livre sans ISBN, trouvé par son titre
+          ['1789', ['ex-manuscrit']],
+          ['anonyme', ['ex-manuscrit']],
           ['_100%', ['ex-jamais']], // jokers LIKE pris littéralement
           ['%', ['ex-jamais']],
           ['balzac', []],

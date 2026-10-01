@@ -13,7 +13,13 @@ import { construireHierarchie } from '../../fixtures/hierarchie.js';
 export const ISBN_HUGO = Isbn.creer('9780306406157');
 export const ISBN_ZOLA = Isbn.creer('9780804429573');
 
-export const hugo = Livre.creer({ isbn: ISBN_HUGO, titre: 'Les Misérables', auteurs: ['Victor Hugo'], couverture: null });
+export const hugo = Livre.creer({
+  id: 'livre-hugo',
+  isbn: ISBN_HUGO,
+  titre: 'Les Misérables',
+  auteurs: ['Victor Hugo'],
+  couverture: null,
+});
 
 /**
  * Tous les ports remplacés par des fakes, pré-remplis avec la hiérarchie de test
@@ -38,7 +44,7 @@ export type Contexte = ReturnType<typeof creerContexte>;
 
 /** Ajoute directement un exemplaire de « Les Misérables » rangé sur l'étagère R1. */
 export async function ajouterExemplaireHugo(ctx: Contexte, id = 'ex-hugo'): Promise<Exemplaire> {
-  const exemplaire = Exemplaire.creer({ id, isbn: ISBN_HUGO, emplacement: ctx.hierarchie.etagere1 });
+  const exemplaire = Exemplaire.creer({ id, livre: hugo, emplacement: ctx.hierarchie.etagere1 });
   await ctx.exemplaires.enregistrer(exemplaire);
   return exemplaire;
 }

@@ -42,7 +42,55 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX idx_exemplaires_emplacement ON exemplaires (emplacement_id);
   CREATE INDEX idx_exemplaires_detection ON exemplaires (detection_emplacement_id);
   `,
+  // v2 : l'ISBN devient facultatif. Les livres ont un identifiant interne (les livres
+  // existants reçoivent 'livre-<isbn>') et les exemplaires référencent ce livre.
+  `
+  CREATE TABLE livres_v2 (
+    id              TEXT PRIMARY KEY,
+    isbn            TEXT UNIQUE,            -- NULL autorisé (plusieurs livres sans ISBN)
+    titre           TEXT NOT NULL,
+    auteurs         TEXT NOT NULL,
+    couverture      TEXT,
+    texte_recherche TEXT NOT NULL
+  );
+  INSERT INTO livres_v2 (id, isbn, titre, auteurs, couverture, texte_recherche)
+    SELECT 'livre-' || isbn, isbn, titre, auteurs, couverture, texte_recherche FROM livres;
+
+  CREATE TABLE exemplaires_v2 (
+    id                       TEXT PRIMARY KEY,
+    livre_id                 TEXT NOT NULL REFERENCES livres_v2 (id),
+    emplacement_id           TEXT NOT NULL REFERENCES emplacements (id),
+    detection_emplacement_id TEXT REFERENCES emplacements (id),
+    detection_date           TEXT,
+    CHECK ((detection_emplacement_id IS NULL) = (detection_date IS NULL))
+  );
+  INSERT INTO exemplaires_v2 (id, livre_id, emplacement_id, detection_emplacement_id, detection_date)
+    SELECT id, 'livre-' || isbn, emplacement_id, detection_emplacement_id, detection_date FROM exemplaires;
+
+  DROP TABLE exemplaires;
+  DROP TABLE livres;
+  ALTER TABLE livres_v2 RENAME TO livres;
+  ALTER TABLE exemplaires_v2 RENAME TO exemplaires;
+
+  CREATE INDEX idx_exemplaires_livre ON exemplaires (livre_id);
+  CREATE INDEX idx_exemplaires_emplacement ON exemplaires (emplacement_id);
+  CREATE INDEX idx_exemplaires_detection ON exemplaires (detection_emplacement_id);
+  `,
 ];
+
+/** Nombre de migrations : version du schéma attendue (exporté pour les tests). */
+export const VERSION_SCHEMA = MIGRATIONS.length;
+
+/** Applique les migrations jusqu'à `version` incluse (toutes par défaut). Exporté pour les tests. */
+export function migrer(db: BaseSqlite, version = VERSION_SCHEMA): void {
+  const versionActuelle = db.pragma('user_version', { simple: true }) as number;
+  MIGRATIONS.slice(versionActuelle, version).forEach((sql, i) => {
+    db.transaction(() => {
+      db.exec(sql);
+      db.pragma(`user_version = ${versionActuelle + i + 1}`);
+    })();
+  });
+}
 
 /** Ouvre (ou crée) la base, active les clés étrangères et applique les migrations. */
 export function ouvrirBaseSqlite(chemin: string): BaseSqlite {
@@ -53,16 +101,6 @@ export function ouvrirBaseSqlite(chemin: string): BaseSqlite {
   if (chemin !== ':memory:') db.pragma('journal_mode = WAL');
   migrer(db);
   return db;
-}
-
-function migrer(db: BaseSqlite): void {
-  const versionActuelle = db.pragma('user_version', { simple: true }) as number;
-  MIGRATIONS.slice(versionActuelle).forEach((sql, i) => {
-    db.transaction(() => {
-      db.exec(sql);
-      db.pragma(`user_version = ${versionActuelle + i + 1}`);
-    })();
-  });
 }
 
 /** Vide toutes les tables (utilisé par le seed). */
