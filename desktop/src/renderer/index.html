@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Politique de sécurité : seuls les scripts de l'application s'exécutent.
+      Les images https sont autorisées pour les couvertures (Open Library ou saisies à la main).
+      La page ne fait AUCUN appel réseau elle-même : tout passe par le processus main.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:"
+    />
+    <title>e-biblio</title>
+  </head>
+  <body>
+    <div id="racine"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

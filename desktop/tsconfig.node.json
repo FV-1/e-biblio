@@ -1,0 +1,9 @@
+{
+  // Code exécuté par Node.js/Electron : processus main, preload, et leurs tests.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"]
+  },
+  "include": ["src/main", "src/preload", "src/commun", "tests/main", "electron.vite.config.ts", "vitest.config.ts"]
+}
