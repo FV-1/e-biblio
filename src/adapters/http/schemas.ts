@@ -1,0 +1,58 @@
+import { z } from 'zod';
+import { TYPES_EMPLACEMENT } from '../../domain/type-emplacement.js';
+
+// Messages de validation en français, cohérents avec ceux du domaine.
+z.config(z.locales.fr());
+
+/**
+ * Validation des entrées HTTP : forme et types uniquement. Les règles métier
+ * (hiérarchie, ISBN, rangement…) restent dans le domaine et ne sont PAS
+ * dupliquées ici. Les objets sont stricts : un champ inconnu (faute de frappe)
+ * est refusé plutôt qu'ignoré silencieusement.
+ */
+
+const identifiant = z.string().trim().min(1).max(200);
+const coordonnees = z.strictObject({ x: z.number(), y: z.number() });
+
+export const parametresId = z.object({ id: identifiant });
+
+export const filtreEmplacements = z.object({
+  type: z.enum(TYPES_EMPLACEMENT).optional(),
+  parentId: identifiant.optional(),
+});
+
+export const corpsCreerEmplacement = z.strictObject({
+  type: z.enum(TYPES_EMPLACEMENT),
+  nom: z.string(),
+  parentId: identifiant.nullable().default(null),
+  coordonnees: coordonnees.nullable().default(null),
+});
+
+export const corpsModifierEmplacement = z
+  .strictObject({
+    nom: z.string().optional(),
+    parentId: identifiant.nullable().optional(),
+    coordonnees: coordonnees.nullable().optional(),
+  })
+  .refine((c) => Object.keys(c).length > 0, { message: 'Au moins un champ à modifier est requis' });
+
+export const corpsAjouterExemplaire = z
+  .strictObject({
+    isbn: z.string().min(1).max(30),
+    emplacementId: identifiant,
+    // Saisie manuelle (facultative) : utilisée si le catalogue est indisponible.
+    titre: z.string().optional(),
+    auteurs: z.array(z.string()).max(50).optional(),
+    couverture: z.url({ protocol: /^https?$/ }).nullable().optional(),
+  })
+  .refine((c) => c.titre !== undefined || (c.auteurs === undefined && c.couverture === undefined), {
+    message: 'Une saisie manuelle doit contenir au moins le « titre »',
+    path: ['titre'],
+  });
+
+export const requeteRecherche = z.object({ q: z.string().trim().min(1, 'Le paramètre « q » est obligatoire').max(200) });
+
+export const corpsDetection = z.strictObject({
+  exemplaireId: identifiant,
+  emplacementId: identifiant,
+});

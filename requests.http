@@ -1,0 +1,226 @@
+### =====================================================================
+### e-biblio — requêtes de test de l'API
+### Extension VS Code « REST Client » (humao.rest-client) ou client HTTP JetBrains.
+### Prérequis : `npm run seed` puis `npm run dev`.
+### Les requêtes nommées (# @name) sont réutilisées par les suivantes :
+### exécutez-les dans l'ordre du fichier.
+### =====================================================================
+
+@baseUrl = http://localhost:3000
+
+### Santé du serveur
+GET {{baseUrl}}/sante
+
+
+### =====================================================================
+### 1. EMPLACEMENTS
+### =====================================================================
+
+### Lister tous les emplacements
+GET {{baseUrl}}/emplacements
+
+### Lister les étagères
+GET {{baseUrl}}/emplacements?type=etagere
+
+### Lister les enfants d'un emplacement (rayons de la salle A)
+GET {{baseUrl}}/emplacements?parentId=salle-1
+
+### Détail d'un emplacement : localisation complète + enfants
+GET {{baseUrl}}/emplacements/rayon-1-1
+
+### Créer un rayon dans la salle A
+# @name creerRayon
+POST {{baseUrl}}/emplacements
+Content-Type: application/json
+
+{
+  "type": "rayon",
+  "nom": "Rayon Bandes dessinées",
+  "parentId": "salle-1",
+  "coordonnees": { "x": 5, "y": 50 }
+}
+
+### Créer une étagère dans ce nouveau rayon (sans coordonnées : héritera de celles du rayon)
+# @name creerEtagere
+POST {{baseUrl}}/emplacements
+Content-Type: application/json
+
+{
+  "type": "etagere",
+  "nom": "Étagère BD 1",
+  "parentId": "{{creerRayon.response.body.id}}"
+}
+
+### Modifier l'étagère : renommer et positionner sur le plan
+PATCH {{baseUrl}}/emplacements/{{creerEtagere.response.body.id}}
+Content-Type: application/json
+
+{
+  "nom": "Étagère BD A-M",
+  "coordonnees": { "x": 15, "y": 50 }
+}
+
+### Supprimer l'étagère (vide → 204)
+DELETE {{baseUrl}}/emplacements/{{creerEtagere.response.body.id}}
+
+### Supprimer le rayon (désormais vide → 204)
+DELETE {{baseUrl}}/emplacements/{{creerRayon.response.body.id}}
+
+### [Erreur 409] Supprimer un emplacement qui a des enfants
+DELETE {{baseUrl}}/emplacements/salle-1
+
+### [Erreur 422] Hiérarchie invalide : une étagère directement dans une salle
+POST {{baseUrl}}/emplacements
+Content-Type: application/json
+
+{
+  "type": "etagere",
+  "nom": "Étagère mal placée",
+  "parentId": "salle-1"
+}
+
+### [Erreur 404] Emplacement inexistant
+GET {{baseUrl}}/emplacements/inexistant
+
+### [Erreur 400] Validation zod : type inconnu et champ en trop
+POST {{baseUrl}}/emplacements
+Content-Type: application/json
+
+{
+  "type": "placard",
+  "nom": "X",
+  "champInconnu": true
+}
+
+
+### =====================================================================
+### 2. AJOUT D'EXEMPLAIRES PAR ISBN
+### =====================================================================
+
+### Ajout via Open Library (1984, Gallimard) — nécessite une connexion Internet
+# @name ajoutCatalogue
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "978-2-07-036822-8",
+  "emplacementId": "etagere-1-1-1"
+}
+
+### Second exemplaire du même livre, en ISBN-10 : déjà en base, aucun appel externe ("sourceLivre": "base")
+# @name ajoutBase
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "207036822X",
+  "emplacementId": "etagere-1-1-2"
+}
+
+### Ajout par saisie manuelle (catalogue non interrogé)
+# @name ajoutManuel
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "9780306406157",
+  "emplacementId": "etagere-2-1-1",
+  "titre": "Les Misérables",
+  "auteurs": ["Victor Hugo"],
+  "couverture": null
+}
+
+### [Erreur 422 CATALOGUE_INDISPONIBLE / LIVRE_INCONNU_DU_CATALOGUE]
+### Pour simuler une panne : relancer le serveur avec OPEN_LIBRARY_URL=http://127.0.0.1:65530
+### puis renvoyer la requête avec "titre" et "auteurs" (saisie manuelle).
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "9780804429573",
+  "emplacementId": "etagere-1-2-1"
+}
+
+### [Erreur 422] ISBN invalide (clé de contrôle)
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "9780306406158",
+  "emplacementId": "etagere-1-1-1"
+}
+
+### [Erreur 422] Rangement ailleurs que sur une étagère
+POST {{baseUrl}}/exemplaires
+Content-Type: application/json
+
+{
+  "isbn": "9780306406157",
+  "emplacementId": "rayon-1-1"
+}
+
+
+### =====================================================================
+### 3. RECHERCHE ET LOCALISATION
+### =====================================================================
+
+### Recherche par titre
+GET {{baseUrl}}/exemplaires?q=1984
+
+### Recherche par auteur (insensible à la casse et aux accents)
+GET {{baseUrl}}/exemplaires?q=victor%20HUGO
+
+### Recherche par ISBN (avec tirets, ou ISBN-10)
+GET {{baseUrl}}/exemplaires?q=978-0-306
+
+### Détail d'un exemplaire
+GET {{baseUrl}}/exemplaires/{{ajoutManuel.response.body.id}}
+
+### [Erreur 400] Recherche sans terme
+GET {{baseUrl}}/exemplaires?q=
+
+### [Erreur 404] Exemplaire inexistant
+GET {{baseUrl}}/exemplaires/inexistant
+
+
+### =====================================================================
+### 4. DÉTECTIONS (scans) — l'événement ExemplaireDetecte apparaît dans la console du serveur
+### =====================================================================
+
+### Scan à la bonne place → malRange: false
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+  "exemplaireId": "{{ajoutManuel.response.body.id}}",
+  "emplacementId": "etagere-2-1-1"
+}
+
+### Scan sur une autre étagère → malRange: true
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+  "exemplaireId": "{{ajoutManuel.response.body.id}}",
+  "emplacementId": "etagere-1-2-3"
+}
+
+### [Erreur 422] Scan sur un emplacement qui n'est pas une étagère
+POST {{baseUrl}}/detections
+Content-Type: application/json
+
+{
+  "exemplaireId": "{{ajoutManuel.response.body.id}}",
+  "emplacementId": "salle-1"
+}
+
+### [Erreur 409] Supprimer une étagère où un exemplaire a été détecté
+DELETE {{baseUrl}}/emplacements/etagere-1-2-3
+
+
+### =====================================================================
+### 5. EXEMPLAIRES MAL RANGÉS
+### =====================================================================
+
+### Liste des exemplaires mal rangés (position constatée ≠ position théorique)
+GET {{baseUrl}}/exemplaires/mal-ranges
