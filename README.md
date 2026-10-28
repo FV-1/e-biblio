@@ -195,6 +195,8 @@ Toutes les erreurs ont le même format :
 
 ## Architecture
 
+Documentation d'architecture : [vues C4 et déploiement](docs/architecture-c4.md), [scénarios de qualité](docs/scenarios-qualite.md) et [décisions (ADR)](docs/adr/README.md).
+
 ### Serveur : architecture hexagonale
 
 ```
