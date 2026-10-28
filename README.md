@@ -40,7 +40,12 @@ npm run dev    # démarre l'API sur http://localhost:3000, redémarre à chaque 
 
 > ⚠️ `npm run seed` **vide entièrement la base** avant de la recréer.
 
-Le seed crée 1 étage, 2 salles (A, B), 4 rayons (Romans, Policiers, Sciences, Histoire) et 3 étagères par rayon, soit 19 emplacements. Leurs identifiants sont lisibles : `etage-1`, `salle-1`, `rayon-1-2`, `etagere-1-2-3`. Le seed ne crée **aucun exemplaire**. Ajoutez-en avec `requests.http` (voir plus bas) ou `POST /exemplaires`.
+Le seed crée 1 étage, 2 salles (A, B), 4 rayons (Romans, Policiers, Sciences, Histoire) et 3 étagères par rayon, soit 19 emplacements. Leurs identifiants sont lisibles : `etage-1`, `salle-1`, `rayon-1-2`, `etagere-1-2-3`. Le seed ne crée **aucun exemplaire**. Pour partir d'un fonds déjà rempli, utilisez `npm run seed:demo` (voir ci-dessous). Sinon, ajoutez-en avec `requests.http` (voir plus bas) ou `POST /exemplaires`.
+
+`npm run seed:demo` fait la même chose (il vide aussi la base), puis ajoute un **fonds de démonstration** : 35 œuvres et 49 exemplaires répartis dans les quatre rayons.
+- Œuvres : éditions réelles (ISBN et couverture Open Library), plusieurs auteurs, accents, et quelques œuvres sans ISBN, sans couverture ou sans auteur.
+- Exemplaires : jamais détectés, bien rangés, et 7 mal rangés (dans la même salle ou dans l'autre).
+- Identifiants lisibles : `livre-germinal`, `ex-germinal-2`. Ils sont pratiques pour essayer `POST /detections`.
 
 En production : `npm run build`, puis `npm start`.
 
@@ -206,7 +211,7 @@ src/
 │   ├── events/        EventPublisher écrivant dans la console
 │   └── systeme/       Horloge système, générateur d'UUID
 ├── main.ts        Composition root : seul fichier qui instancie les adapters et les injecte
-└── seed.ts        Second point d'entrée (npm run seed)
+└── seed.ts        Second point d'entrée (npm run seed, npm run seed:demo)
 ```
 
 **Sens des dépendances** : `adapters → application → ports → domain`.
@@ -285,6 +290,7 @@ npm run typecheck
 | `dev` : API avec rechargement automatique (tsx) | `dev` : Electron et Vite avec rechargement à chaud |
 | `build` / `start` : compilation vers `dist/`, puis exécution | `build` / `start` : compilation vers `out/`, puis aperçu |
 | `seed` : réinitialise la base et crée les emplacements | `test`, `typecheck` |
+| `seed:demo` : idem, plus des livres et exemplaires de démonstration | |
 | `test`, `test:integration`, `test:all`, `typecheck` | |
 
 ## Hors périmètre de cette version

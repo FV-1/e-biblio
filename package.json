@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "seed": "tsx src/seed.ts",
+    "seed:demo": "tsx src/seed.ts --demo",
     "test": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:all": "vitest run",
