@@ -22,6 +22,7 @@ function composerService(): { service: ServiceInvocable; arreter: () => Promise<
     cheminFichier: join(app.getPath('userData'), 'configuration.json'),
     urlEnvironnement: process.env.BIBLIO_API_URL,
   });
+  // Plus long que le délai du serveur pour Open Library (3 s), pour recevoir CATALOGUE_INDISPONIBLE.
   const client = new ClientApiHttp({ urlServeur: () => configuration.urlServeur(), delaiMaxMs: 5000 });
 
   // Appairage du téléphone : chaque ISBN reçu est poussé vers les fenêtres (IPC main → page).

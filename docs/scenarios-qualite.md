@@ -9,7 +9,7 @@ Notes : (importance métier, difficulté technique), H / M / L.
 ```text
 Utilité
 +-- Disponibilité
-|   +-- (H,H) S1  Open Library en panne : l'ajout de livres continue, aucune attente > 6 s
+|   +-- (H,H) S1  Open Library en panne : l'ajout de livres continue, aucune attente > 4 s
 +-- Modifiabilité
 |   +-- (H,M) S2  Changer de base ou de catalogue : 0 fichier du domaine ou des cas d'usage modifié
 +-- Testabilité
@@ -27,16 +27,18 @@ S1 est le moteur de l'architecture : c'est le seul scénario (H,H). S2 vient ens
 | Partie | Valeur |
 | --- | --- |
 | Source | Open Library (service externe, gratuit, sans engagement de disponibilité) |
-| Stimulus | Ne répond plus, ou répond après plus de 5 s |
+| Stimulus | Ne répond plus, ou répond après plus de 3 s |
 | Artefact | Ajout d'un exemplaire par ISBN (`POST /exemplaires`) |
 | Environnement | Fonctionnement normal, bibliothécaire en train de saisir des livres |
 | Réponse | Erreur explicite `CATALOGUE_INDISPONIBLE` ; le client propose la saisie manuelle en gardant l'ISBN ; recherche, localisation et ajout d'un livre déjà connu ne sont pas touchés |
-| Mesure | Réponse en moins de 6 s (délai de 5 s + marge) ; 100 % des ajouts aboutissent avec la saisie manuelle ; 0 erreur sur les autres opérations |
+| Mesure | Réponse en moins de 4 s, donc avant que le client desktop n'abandonne (5 s) ; 100 % des ajouts aboutissent avec la saisie manuelle ; 0 erreur sur les autres opérations |
 
 Preuve :
 - Tests unitaires `tests/unit/application/exemplaires.test.ts` : « catalogue hors ligne sans saisie » et « catalogue hors ligne puis renvoi avec saisie manuelle ».
-- Test d'intégration `tests/integration/isbn/open-library-catalogue.test.ts` : réseau coupé, délai dépassé, erreur 5xx et réponse illisible donnent tous « indisponible », sans exception.
-- Mesure en direct (28/10/2026), catalogue injoignable et délai réglé à 2 s : erreur 422 en 2,8 s, ajout manuel en 0,23 s, recherche en 0,21 s.
+- Test d'intégration `tests/integration/isbn/open-library-catalogue.test.ts` : réseau coupé, délai dépassé, erreur 5xx et réponse illisible donnent tous « indisponible », sans exception ; un seul délai couvre toute la recherche, auteurs compris.
+- Mesure en direct (28/10/2026), catalogue injoignable, réglages par défaut : erreur 422 en 3,2 s, ajout manuel en 0,26 s, recherche en 0,22 s.
+
+Ce scénario a révélé un défaut pendant la répétition de la démo : le serveur accordait 5 s **par appel** à Open Library (édition, puis auteurs) et le client desktop abandonnait à 5 s. Il recevait donc « délai dépassé » au lieu de `CATALOGUE_INDISPONIBLE`, et ne proposait pas la saisie manuelle. Correction : un seul délai de 3 s pour toute la recherche, inférieur à celui du client (budget de délai).
 
 Décision liée : [ADR-002](adr/ADR-002-catalogue-externe-tolerant-aux-pannes.md).
 

@@ -36,9 +36,12 @@ export class OpenLibraryCatalogue implements CatalogueExterne {
   }
 
   async rechercherParIsbn(isbn: Isbn): Promise<ResultatCatalogue> {
+    // Un seul délai pour toute la recherche (édition puis auteurs) : la réponse
+    // part toujours avant delaiMaxMs, quel que soit le nombre d'appels.
+    const echeance = AbortSignal.timeout(this.options.delaiMaxMs);
     let reponse: Response;
     try {
-      reponse = await this.get(`/isbn/${isbn.valeur}.json`);
+      reponse = await this.get(`/isbn/${isbn.valeur}.json`, echeance);
     } catch (erreur) {
       return { statut: 'indisponible', raison: decrire(erreur) };
     }
@@ -57,7 +60,7 @@ export class OpenLibraryCatalogue implements CatalogueExterne {
       statut: 'trouve',
       livre: {
         titre: edition.subtitle ? `${edition.title} : ${edition.subtitle}` : edition.title,
-        auteurs: await this.resoudreAuteurs(edition),
+        auteurs: await this.resoudreAuteurs(edition, echeance),
         couverture: edition.covers?.[0] && edition.covers[0] > 0 ? `${URL_COUVERTURES}/${edition.covers[0]}-L.jpg` : null,
       },
     };
@@ -65,13 +68,13 @@ export class OpenLibraryCatalogue implements CatalogueExterne {
 
   /**
    * L'édition ne contient que des références (/authors/OL…A) : un appel par auteur,
-   * en parallèle. Un auteur introuvable est ignoré plutôt que de faire échouer l'ajout.
+   * en parallèle. Un auteur introuvable, ou hors délai, est ignoré plutôt que de faire échouer l'ajout.
    */
-  private async resoudreAuteurs(edition: z.infer<typeof schemaEdition>): Promise<string[]> {
+  private async resoudreAuteurs(edition: z.infer<typeof schemaEdition>, echeance: AbortSignal): Promise<string[]> {
     const cles = edition.authors?.map((a) => a.key) ?? [];
     const resultats = await Promise.allSettled(
       cles.map(async (cle) => {
-        const reponse = await this.get(`${cle}.json`);
+        const reponse = await this.get(`${cle}.json`, echeance);
         if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
         return schemaAuteur.parse(await reponse.json()).name;
       }),
@@ -81,11 +84,11 @@ export class OpenLibraryCatalogue implements CatalogueExterne {
     return noms;
   }
 
-  private get(chemin: string): Promise<Response> {
+  private get(chemin: string, echeance: AbortSignal): Promise<Response> {
     return this.fetch(new URL(chemin, this.options.urlBase), {
       headers: { Accept: 'application/json', 'User-Agent': 'e-biblio-mvp/0.1 (projet pedagogique)' },
       redirect: 'follow',
-      signal: AbortSignal.timeout(this.options.delaiMaxMs),
+      signal: echeance,
     });
   }
 }

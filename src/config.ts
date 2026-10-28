@@ -10,7 +10,9 @@ const configSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DB_PATH: z.string().min(1).default('./data/biblio.db'),
   OPEN_LIBRARY_URL: z.url().default('https://openlibrary.org'),
-  OPEN_LIBRARY_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  // Doit rester inférieur au délai du client desktop (5 s) : sinon le client abandonne
+  // avant de recevoir CATALOGUE_INDISPONIBLE et ne peut pas proposer la saisie manuelle.
+  OPEN_LIBRARY_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
 });
 
 export type Config = z.infer<typeof configSchema>;

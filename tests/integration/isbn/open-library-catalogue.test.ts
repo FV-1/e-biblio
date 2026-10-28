@@ -56,6 +56,23 @@ describe('OpenLibraryCatalogue', () => {
     expect(await adapter.rechercherParIsbn(isbn)).toMatchObject({ livre: { auteurs: ['Jasmin Hodžić'] } });
   });
 
+  it('applique un seul délai à toute la recherche, auteurs compris', async () => {
+    const signaux: (AbortSignal | null | undefined)[] = [];
+    const fetchSimule = (async (url: URL, init?: RequestInit) => {
+      signaux.push(init?.signal);
+      return url.pathname === EDITION
+        ? json({ title: 'Le Petit Prince', authors: [{ key: '/authors/OL1A' }, { key: '/authors/OL2A' }] })
+        : json({ name: 'Auteur' });
+    }) as unknown as typeof fetch;
+    const adapter = new OpenLibraryCatalogue({ urlBase: 'https://ol.test', delaiMaxMs: 1000, fetch: fetchSimule });
+
+    await adapter.rechercherParIsbn(isbn);
+
+    expect(signaux).toHaveLength(3);
+    expect(signaux[0]).toBeInstanceOf(AbortSignal);
+    expect(new Set(signaux).size).toBe(1);
+  });
+
   it('renvoie « introuvable » sur un 404', async () => {
     const { adapter } = catalogue({});
     expect(await adapter.rechercherParIsbn(isbn)).toEqual({ statut: 'introuvable' });

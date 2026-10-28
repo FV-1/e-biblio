@@ -55,7 +55,7 @@ En production : `npm run build`, puis `npm start`.
 | `HOST` | `0.0.0.0` | Interface d'écoute |
 | `DB_PATH` | `./data/biblio.db` | Fichier SQLite (créé automatiquement) |
 | `OPEN_LIBRARY_URL` | `https://openlibrary.org` | Adresse du catalogue externe |
-| `OPEN_LIBRARY_TIMEOUT_MS` | `5000` | Délai maximal d'attente du catalogue |
+| `OPEN_LIBRARY_TIMEOUT_MS` | `3000` | Délai maximal de toute la recherche dans le catalogue. Doit rester inférieur au délai du client desktop (5 s) |
 
 Exemple sous PowerShell : `$env:PORT=4000; npm run dev`. Sous bash : `PORT=4000 npm run dev`.
 
