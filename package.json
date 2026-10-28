@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "dev:panne": "tsx --env-file=demo/panne-catalogue.env src/main.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "seed": "tsx src/seed.ts",

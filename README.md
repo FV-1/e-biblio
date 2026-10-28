@@ -293,6 +293,7 @@ npm run typecheck
 | `build` / `start` : compilation vers `dist/`, puis exécution | `build` / `start` : compilation vers `out/`, puis aperçu |
 | `seed` : réinitialise la base et crée les emplacements | `test`, `typecheck` |
 | `seed:demo` : idem, plus des livres et exemplaires de démonstration | |
+| `dev:panne` : API avec Open Library injoignable, pour démontrer le scénario S1 ([déroulé de la démo](demo/README.md)) | |
 | `test`, `test:integration`, `test:all`, `typecheck` | |
 
 ## Hors périmètre de cette version
