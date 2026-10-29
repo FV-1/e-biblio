@@ -13,5 +13,6 @@ Ces ADR ont été rédigés le 28/10/2026 à partir du code et de l'historique G
 | [ADR-005](ADR-005-telephone-lecteur-codes-barres.md) | Le téléphone comme lecteur de codes-barres, appairé au poste | S4 |
 | [ADR-006](ADR-006-isbn-facultatif.md) | Livre identifié par un identifiant interne, ISBN facultatif | besoin métier |
 | [ADR-007](ADR-007-plan-3d-et-suivi.md) | Plan 3D dans le client, suivi de l'exemplaire toutes les 3 s | demande du client |
+| [ADR-008](ADR-008-scanner-video-https.md) | Caméra en direct sur le téléphone, HTTPS local auto-signé (remplace la photo de l'ADR-005) | demande du client, S4 |
 
 Les deux décisions majeures présentées en soutenance sont **ADR-001** et **ADR-002**.

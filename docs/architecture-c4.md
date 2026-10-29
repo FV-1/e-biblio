@@ -33,11 +33,11 @@ Légende : `[Personne]`, `[Système]`, `[Conteneur]`, `[Composant]` ; les flèch
    | Bibliothécaire       |
    +----------------------+
        |              |
-       | Utilise      | Photographie le code-barres
+       | Utilise      | Vise le code-barres (caméra en direct)
        |              | (après avoir scanné le QR code)
 .......|..............|..............................................................
 :      v              v                                                             :
-:  +-------------------------+   ISBN [HTTP local,   +---------------------------+  :
+:  +-------------------------+   ISBN [HTTPS local,  +---------------------------+  :
 :  | [Conteneur]             |   jeton 128 bits]     | [Conteneur]               |  :
 :  | Client desktop          |<----------------------| Page mobile d'appairage   |  :
 :  | Electron + React        |                       | HTML/JS, sur le téléphone |  :
@@ -126,7 +126,7 @@ Règle de dépendance (ADR-001), vérifiée par `tests/unit/architecture.test.ts
   |  + serveur d'appairage :47800    | :3000  |  + fichier SQLite ./data/biblio.db|
   +----------------------------------+        +----------------------------------+
         ^                                                  |
-        | HTTP local (même Wi-Fi)                          | HTTPS (Internet)
+        | HTTPS local (même Wi-Fi)                         | HTTPS (Internet)
         |                                                  v
   +----------------------+                      +----------------------+
   | Téléphone            |                      | Open Library         |
@@ -141,7 +141,7 @@ Tout tourne sur le réseau local de la bibliothèque : seul l'appel à Open Libr
 
 | Vue du 01/10 | Code actuel | Raison |
 | --- | --- | --- |
-| Conteneur « PWA mobile » relié au serveur API | Page mobile servie par le client desktop | Caméra interdite en HTTP sur mobile (ADR-005) |
+| Conteneur « PWA mobile » relié au serveur API | Page mobile servie par le client desktop, en HTTPS auto-signé | Rien à installer (ADR-005) ; caméra en direct grâce au HTTPS local (ADR-008) |
 | WebSocket (temps réel) entre serveur et clients | Interrogation toutes les 3 s par le plan 3D | Pas de changement serveur avant la soutenance ; un flux SSE via le port `EventPublisher` est la cible (ADR-007) |
 | Prêts, emprunts, personne « Lecteur » | Non réalisés | Hors périmètre de cette version |
 | Composant « Sources de localisation QR / RFID » | Route `POST /detections` | Un seul point d'entrée pour toutes les sources de scan |

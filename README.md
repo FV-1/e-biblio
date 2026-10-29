@@ -95,14 +95,16 @@ L'adresse du serveur se règle de trois façons, par ordre de priorité :
   - Il faut WebGL (activé par défaut). Sinon, l'onglet l'indique et la localisation reste affichée en texte.
 - **Ajouter un livre**, de trois façons :
   1. **Par ISBN** : la notice (titre, auteurs, couverture) est affichée pour vérification avant l'ajout. Si l'ISBN est inconnu ou si Open Library ne répond pas, un bouton bascule vers la saisie manuelle en conservant l'ISBN.
-  2. **Avec le téléphone** : l'application affiche un QR code. Scannez-le avec l'appareil photo du téléphone, puis photographiez le code-barres du livre ; la notice s'affiche aussitôt sur l'ordinateur. Il n'y a rien à installer sur le téléphone, et la session reste active pour scanner plusieurs livres à la suite.
+  2. **Avec le téléphone** : l'application affiche un QR code. Scannez-le avec l'appareil photo du téléphone : une page s'ouvre avec la caméra en direct. **Visez le code-barres, il est lu tout seul** : le cadre passe au vert, le téléphone vibre, et la notice s'affiche aussitôt sur l'ordinateur. Il n'y a rien à installer, et on enchaîne les livres sans toucher l'écran. Un historique liste les livres envoyés ; la lampe du téléphone et la saisie de l'ISBN sont à portée de pouce.
   3. **Saisie manuelle** : titre obligatoire ; auteurs, couverture et **ISBN facultatifs** (ouvrages anciens, documents internes…).
 
   Il faut ensuite choisir l'étagère (salle › rayon › étagère). La dernière étagère utilisée est proposée par défaut.
 
 **Prérequis pour le téléphone** :
 - Il doit être sur le **même réseau Wi-Fi** que l'ordinateur.
-- L'application ouvre un petit serveur local (port `47800`, ou un port libre s'il est occupé). Au premier lancement, Windows peut demander d'autoriser e-biblio sur le réseau : acceptez pour les réseaux privés.
+- L'application ouvre un petit serveur local **en HTTPS** (port `47800`, ou un port libre s'il est occupé). Au premier lancement, Windows peut demander d'autoriser e-biblio sur le réseau : acceptez pour les réseaux privés.
+- **La première fois**, le téléphone affiche « Connexion non privée » : touchez *Paramètres avancés* puis *Continuer* (sur iPhone : *Afficher les détails* puis *Visiter ce site*). C'est normal : la connexion est chiffrée par un certificat créé par l'ordinateur, que le téléphone ne connaît pas encore. Il ne le redemande plus ensuite.
+- Si la caméra est refusée ou indisponible, la page propose de prendre une photo du code-barres ou de saisir l'ISBN.
 - Si le QR code ne fonctionne pas, l'application propose les autres cartes réseau du poste.
 
 ---
@@ -265,7 +267,8 @@ desktop/src/
   - Le mini-serveur exige un **jeton aléatoire de 128 bits** présent dans l'URL du QR code, et n'accepte qu'un ISBN.
   - L'ISBN reçu est poussé vers la page par un **événement IPC** (main → page), sans scrutation répétée.
 - **Lecture du code-barres** :
-  - Sur un réseau local en HTTP, les navigateurs mobiles interdisent le flux vidéo en direct (il faudrait HTTPS). La page mobile passe donc par une **photo**, puis lit le code-barres dans l'image.
+  - Les navigateurs mobiles n'ouvrent la caméra en direct que sur une page sécurisée : le serveur d'appairage est donc en **HTTPS**, avec un certificat auto-signé créé une fois par le poste (ADR-008).
+  - La page analyse en continu la seule zone du viseur ; un ISBN n'est envoyé qu'après deux lectures identiques, et un livre resté devant l'objectif n'est envoyé qu'une fois.
   - Elle utilise l'API `BarcodeDetector` du navigateur quand elle existe (Chrome Android), sinon **ZXing**, qui fonctionne partout, y compris sur iPhone.
 - **La page n'a aucun accès réseau ni Node.js.** Isolation du contexte, sandbox et politique de sécurité (CSP) sont activées ; tous les appels passent par le processus main. Résultat : pas de CORS à configurer côté serveur.
 - **Les erreurs sont renvoyées comme des valeurs** (`{ ok: false, erreur }`), parce que les exceptions traversent mal la frontière IPC d'Electron.

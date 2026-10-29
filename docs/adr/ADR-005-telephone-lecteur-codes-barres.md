@@ -1,6 +1,6 @@
 # ADR-005 : Le téléphone comme lecteur de codes-barres, appairé au poste
 
-Statut : acceptée - 01/10/2026. Remplace la « PWA mobile » prévue dans le C4 initial.
+Statut : acceptée - 01/10/2026. Remplace la « PWA mobile » prévue dans le C4 initial. La lecture par photo est remplacée par ADR-008 (caméra en direct).
 
 ## Contexte
 
