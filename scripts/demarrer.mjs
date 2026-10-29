@@ -24,6 +24,18 @@ const windows = process.platform === 'win32';
 const enfants = [];
 let arretEnCours = false;
 
+/**
+ * Environnement des commandes lancées. `npm start` transmet sa configuration
+ * aux processus enfants (variables npm_config_*) : sans ce filtre, le
+ * « ignore-scripts » du .npmrc racine empêcherait Electron de télécharger son
+ * binaire lors de l'installation du dossier desktop.
+ */
+function environnement(supplement = {}) {
+  const env = { ...process.env, ...supplement };
+  for (const cle of Object.keys(env)) if (cle.toLowerCase() === 'npm_config_ignore_scripts') delete env[cle];
+  return env;
+}
+
 function titre(texte) {
   console.log(`\n\x1b[1m\x1b[36m▸ ${texte}\x1b[0m`);
 }
@@ -35,7 +47,7 @@ function echouer(message) {
 
 /** Commande npm bloquante (installation, seed) : sa sortie s'affiche telle quelle. */
 function npmBloquant(args, dossier) {
-  const r = spawnSync('npm', args, { cwd: dossier, stdio: 'inherit', shell: true });
+  const r = spawnSync('npm', args, { cwd: dossier, stdio: 'inherit', shell: true, env: environnement() });
   if (r.status !== 0) echouer(`« npm ${args.join(' ')} » a échoué (dossier ${dossier}).`);
 }
 
@@ -44,7 +56,7 @@ function npmEnFond(nom, couleur, args, dossier, env = {}) {
   const enfant = spawn('npm', args, {
     cwd: dossier,
     shell: true,
-    env: { ...process.env, ...env },
+    env: environnement(env),
     detached: !windows, // un groupe de processus à arrêter d'un coup (macOS, Linux)
   });
   const prefixe = `\x1b[${couleur}m[${nom}]\x1b[0m `;
@@ -115,6 +127,17 @@ if (!existsSync(join(desktop, 'node_modules'))) {
   titre('Installation de l’application desktop (première fois, quelques minutes)…');
   npmBloquant(['install'], desktop);
 }
+// Electron (44+) ne télécharge plus son binaire tout seul : le postinstall du desktop le fait,
+// et on le rattrape ici s'il manque (path.txt indique où il est).
+if (!existsSync(join(desktop, 'node_modules', 'electron', 'path.txt'))) {
+  titre('Téléchargement d’Electron…');
+  const r = spawnSync(process.execPath, [join(desktop, 'node_modules', 'electron', 'install.js')], {
+    cwd: desktop,
+    stdio: 'inherit',
+    env: environnement(),
+  });
+  if (r.status !== 0) echouer('Le téléchargement d’Electron a échoué : vérifiez la connexion Internet, puis relancez npm start.');
+}
 
 // ---------- 2. API (et base au premier lancement) ----------
 let apiLancee = false;
@@ -137,7 +160,9 @@ if (await apiRepond()) {
 // ---------- 3. Application ----------
 titre('Ouverture de l’application e-biblio…');
 const app = npmEnFond('app', 35, ['run', 'dev'], desktop, { BIBLIO_API_URL: urlApi });
-app.on('exit', () => {
+app.on('exit', (code) => {
+  if (arretEnCours) return;
+  if (code !== 0) echouer(`L’application n’a pas pu démarrer (code ${code}) : voir les lignes [app] ci-dessus.`);
   titre(apiLancee ? 'Application fermée : arrêt de l’API. À bientôt !' : 'Application fermée. À bientôt !');
   arreterTout(0);
 });

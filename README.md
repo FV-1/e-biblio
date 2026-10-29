@@ -12,24 +12,45 @@ Le dépôt contient deux applications indépendantes, qui ne communiquent que pa
 
 ---
 
+## Démarrage rapide
+
+Il faut seulement **Node.js 20 ou plus récent** ([nodejs.org](https://nodejs.org)). Puis, à la racine du dépôt :
+
+```bash
+npm start
+```
+
+C'est tout. Au premier lancement, cette commande :
+1. installe le serveur et l'application desktop (quelques minutes, une seule fois) ;
+2. crée la base avec un **fonds de démonstration** (35 œuvres, 49 exemplaires, 7 mal rangés) ;
+3. démarre l'API sur `http://localhost:3000`, attend qu'elle réponde, puis ouvre l'application.
+
+Les fois suivantes, elle démarre directement. Une base existante n'est jamais modifiée. **Fermer la fenêtre de l'application arrête tout** (ou Ctrl+C dans le terminal).
+
+Sous Windows, on peut aussi **double-cliquer sur `demarrer.cmd`**.
+
+| Besoin | Commande |
+|---|---|
+| Remettre le fonds de démonstration à zéro | `npm run seed:demo` |
+| Utiliser un autre port | `PORT=4000 npm start` (PowerShell : `$env:PORT=4000; npm start`) |
+| Lancer les tests | `npm run test:all`, puis `cd desktop` et `npm test` |
+
+Si une API tourne déjà sur le port, `npm start` la réutilise au lieu d'en lancer une seconde.
+
 ## Prérequis
 
 - **Node.js 20 ou plus récent** (développé avec Node 24 LTS) et npm.
 - Windows, macOS ou Linux. better-sqlite3 et Electron fournissent des binaires précompilés : aucune compilation native n'est nécessaire.
 - Une connexion Internet pour récupérer les notices sur Open Library. Elle est facultative : la saisie manuelle prend le relais.
 
-## Installation
+## Lancement détaillé (chaque partie séparément)
+
+`npm start` suffit dans la plupart des cas. Les commandes ci-dessous servent à développer une partie seule.
 
 ```bash
-# Serveur (à la racine)
-npm install
-
-# Client desktop
-cd desktop
-npm install
+npm install                 # serveur (à la racine)
+cd desktop && npm install   # client desktop
 ```
-
-## Lancement
 
 ### 1. Serveur
 
@@ -47,7 +68,7 @@ Le seed crée 1 étage, 2 salles (A, B), 4 rayons (Romans, Policiers, Sciences, 
 - Exemplaires : jamais détectés, bien rangés, et 7 mal rangés (dans la même salle ou dans l'autre).
 - Identifiants lisibles : `livre-germinal`, `ex-germinal-2`. Ils sont pratiques pour essayer `POST /detections`.
 
-En production : `npm run build`, puis `npm start`.
+En production : `npm run build`, puis `npm run start:prod`.
 
 | Variable d'environnement | Défaut | Rôle |
 |---|---|---|
@@ -301,8 +322,9 @@ npm run typecheck
 
 | Serveur (racine) | Client (`desktop/`) |
 |---|---|
+| **`start` : tout installer et tout lancer (API + application)** | |
 | `dev` : API avec rechargement automatique (tsx) | `dev` : Electron et Vite avec rechargement à chaud |
-| `build` / `start` : compilation vers `dist/`, puis exécution | `build` / `start` : compilation vers `out/`, puis aperçu |
+| `build` / `start:prod` : compilation vers `dist/`, puis exécution | `build` / `start` : compilation vers `out/`, puis aperçu |
 | `seed` : réinitialise la base et crée les emplacements | `test`, `typecheck` |
 | `seed:demo` : idem, plus des livres et exemplaires de démonstration | |
 | `dev:panne` : API avec Open Library injoignable, pour démontrer le scénario S1 ([déroulé de la démo](demo/README.md)) | |

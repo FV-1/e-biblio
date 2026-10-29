@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "postinstall": "node node_modules/electron/install.js",
     "dev": "node scripts/electron-vite.mjs dev --watch",
     "build": "node scripts/electron-vite.mjs build",
     "start": "node scripts/electron-vite.mjs preview",
