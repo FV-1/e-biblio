@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Livre } from '../../commun/api';
+import type { Exemplaire, Livre } from '../../commun/api';
 import { EcranAjout, type Scan } from './ajout/EcranAjout';
 import { EcranBase } from './base/EcranBase';
 import { ParametresServeur } from './parametres/ParametresServeur';
+import { EcranPlan } from './plan/EcranPlan';
 import { EcranRecherche } from './recherche/EcranRecherche';
 import { useAppairage } from './telephone/use-appairage';
-import { IconeBase, IconeLivres, IconePlus, IconeRecherche, IconeTelephone } from './ui/icones';
+import { IconeBase, IconeLivres, IconePlan, IconePlus, IconeRecherche, IconeTelephone } from './ui/icones';
 
-type Onglet = 'recherche' | 'base' | 'ajout';
+type Onglet = 'recherche' | 'base' | 'plan' | 'ajout';
 
 export function App() {
   const [onglet, setOnglet] = useState<Onglet>('recherche');
@@ -16,6 +17,7 @@ export function App() {
   const [requete, setRequete] = useState<{ terme: string; numero: number } | null>(null);
   const [demandeFocus, setDemandeFocus] = useState(0);
   const [scan, setScan] = useState<Scan | null>(null);
+  const [ciblePlan, setCiblePlan] = useState<{ exemplaire: Exemplaire; numero: number } | null>(null);
 
   // La session téléphone vit à l'échelle de l'application : un scan arrive
   // même si l'utilisateur est sur la recherche, et ouvre alors l'écran d'ajout.
@@ -27,6 +29,11 @@ export function App() {
   const ouvrirAjout = (livre: Livre | null) => {
     setAjout((a) => ({ livre, numero: a.numero + 1 }));
     setOnglet('ajout');
+  };
+
+  const voirSurPlan = (exemplaire: Exemplaire) => {
+    setCiblePlan((c) => ({ exemplaire, numero: (c?.numero ?? 0) + 1 }));
+    setOnglet('plan');
   };
 
   const voirDansRecherche = (terme: string) => {
@@ -62,6 +69,9 @@ export function App() {
             <Onglet actif={onglet === 'base'} controle="vue-base" onClick={() => setOnglet('base')}>
               <IconeBase /> Base de données
             </Onglet>
+            <Onglet actif={onglet === 'plan'} controle="vue-plan" onClick={() => setOnglet('plan')}>
+              <IconePlan /> Plan 3D
+            </Onglet>
             <Onglet actif={onglet === 'ajout'} controle="vue-ajout" onClick={() => setOnglet('ajout')}>
               <IconePlus /> Ajouter un livre
             </Onglet>
@@ -76,12 +86,15 @@ export function App() {
       </header>
 
       {/* Les écrans restent montés : changer d'onglet ne perd ni la recherche, ni les filtres, ni l'ajout en cours. */}
-      <main className={`contenu${onglet === 'base' ? ' contenu-large' : ''}`}>
+      <main className={`contenu${onglet === 'base' || onglet === 'plan' ? ' contenu-large' : ''}`}>
         <div id="vue-recherche" role="tabpanel" aria-label="Rechercher" hidden={onglet !== 'recherche'}>
-          <EcranRecherche onAjouterExemplaire={ouvrirAjout} requeteExterne={requete} demandeFocus={demandeFocus} />
+          <EcranRecherche onAjouterExemplaire={ouvrirAjout} onVoirSurPlan={voirSurPlan} requeteExterne={requete} demandeFocus={demandeFocus} />
         </div>
         <div id="vue-base" role="tabpanel" aria-label="Base de données" hidden={onglet !== 'base'}>
           <EcranBase onAjouterExemplaire={ouvrirAjout} actif={onglet === 'base'} />
+        </div>
+        <div id="vue-plan" role="tabpanel" aria-label="Plan 3D" hidden={onglet !== 'plan'}>
+          <EcranPlan actif={onglet === 'plan'} cible={ciblePlan} />
         </div>
         <div id="vue-ajout" role="tabpanel" aria-label="Ajouter un livre" hidden={onglet !== 'ajout'}>
           <EcranAjout

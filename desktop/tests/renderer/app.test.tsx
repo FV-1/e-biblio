@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { succes } from '../../src/commun/service-bibliotheque';
 import { App } from '../../src/renderer/src/App';
 import { FournisseurService } from '../../src/renderer/src/service/contexte-service';
 import { emplacements, exemplaireBienRange } from '../fixtures/exemplaires';
 import { ServiceFake } from './service-fake';
+
+// jsdom n'a pas de WebGL : la scène 3D est remplacée par un double.
+vi.mock('../../src/renderer/src/plan/ScenePlan', () => ({
+  ScenePlan: (p: { prevue: string | null }) => <div data-testid="scene" data-prevue={p.prevue ?? ''} />,
+}));
 
 let service: ServiceFake;
 
@@ -32,6 +37,16 @@ describe('App', () => {
     afficher();
     expect(onglet(/Rechercher/)).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel', { name: 'Rechercher' })).toBeVisible();
+  });
+
+  it('depuis une carte, ouvre le plan 3D centré sur l’exemplaire', async () => {
+    const u = afficher();
+    await u.type(screen.getByRole('searchbox'), '1984{Enter}');
+    await u.click(await screen.findByRole('button', { name: 'Voir sur le plan' }));
+
+    expect(onglet(/Plan 3D/)).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByTestId('scene')).toHaveAttribute('data-prevue', 'etagere-1-1-1');
+    expect(screen.getByRole('region', { name: 'Exemplaire sélectionné' })).toHaveTextContent('1984');
   });
 
   it('depuis une carte, ouvre l’ajout avec le livre présélectionné', async () => {

@@ -18,6 +18,8 @@ const FILTRES: { id: Filtre; libelle: string; garde: (e: Exemplaire) => boolean 
 interface Props {
   /** Ouvre l'écran d'ajout avec ce livre présélectionné. */
   readonly onAjouterExemplaire?: (livre: Livre) => void;
+  /** Ouvre le plan 3D centré sur cet exemplaire. */
+  readonly onVoirSurPlan?: (exemplaire: Exemplaire) => void;
   /** Recherche déclenchée de l'extérieur (ex. « Voir dans la recherche » après un ajout). */
   readonly requeteExterne?: { readonly terme: string; readonly numero: number } | null;
   /** Délai (ms) avant la recherche automatique pendant la frappe ; null la désactive. */
@@ -26,7 +28,7 @@ interface Props {
   readonly demandeFocus?: number;
 }
 
-export function EcranRecherche({ onAjouterExemplaire, requeteExterne = null, delaiSaisie = 300, demandeFocus = 0 }: Props) {
+export function EcranRecherche({ onAjouterExemplaire, onVoirSurPlan, requeteExterne = null, delaiSaisie = 300, demandeFocus = 0 }: Props) {
   const { etat, rechercher } = useRecherche();
   const [saisie, setSaisie] = useState('');
   const [filtre, setFiltre] = useState<Filtre>('tous');
@@ -88,7 +90,7 @@ export function EcranRecherche({ onAjouterExemplaire, requeteExterne = null, del
         </kbd>
       </form>
 
-      <Resultats etat={etat} filtre={filtre} onFiltre={setFiltre} onAjouterExemplaire={onAjouterExemplaire} />
+      <Resultats etat={etat} filtre={filtre} onFiltre={setFiltre} onAjouterExemplaire={onAjouterExemplaire} onVoirSurPlan={onVoirSurPlan} />
     </section>
   );
 }
@@ -98,11 +100,13 @@ function Resultats({
   filtre,
   onFiltre,
   onAjouterExemplaire,
+  onVoirSurPlan,
 }: {
   etat: EtatRecherche;
   filtre: Filtre;
   onFiltre: (f: Filtre) => void;
   onAjouterExemplaire: Props['onAjouterExemplaire'];
+  onVoirSurPlan: Props['onVoirSurPlan'];
 }) {
   const comptes = useMemo(() => {
     const exemplaires = etat.statut === 'succes' ? etat.exemplaires : [];
@@ -175,7 +179,7 @@ function Resultats({
           </div>
           <div className="liste-resultats">
             {visibles.map((exemplaire) => (
-              <CarteExemplaire key={exemplaire.id} exemplaire={exemplaire} onAjouterExemplaire={onAjouterExemplaire} />
+              <CarteExemplaire key={exemplaire.id} exemplaire={exemplaire} onAjouterExemplaire={onAjouterExemplaire} onVoirSurPlan={onVoirSurPlan} />
             ))}
           </div>
         </>

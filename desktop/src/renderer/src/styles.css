@@ -565,7 +565,9 @@ textarea:focus-visible {
 
 .carte-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 8px;
 }
 
@@ -1362,5 +1364,164 @@ textarea:focus-visible {
 
   .ligne-champ {
     flex-direction: column;
+  }
+}
+
+/* ---------- Plan 3D ---------- */
+
+.plan {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.plan-panneau {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plan-recherche label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.plan-resultats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.plan-resultat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte);
+  text-align: left;
+}
+
+.plan-resultat-actif {
+  border-color: var(--accent);
+  background: var(--accent-doux);
+}
+
+.plan-resultat-titre {
+  font-weight: 600;
+}
+
+.plan-fiche {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+
+.plan-fiche h3 {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.plan-legende {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pastille {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+.pastille-prevue {
+  background: #2b5c8f;
+}
+
+.pastille-vue {
+  background: #c2412a;
+}
+
+.plan-scene {
+  position: relative;
+  height: calc(100vh - 150px);
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+}
+
+.plan-scene canvas {
+  display: block;
+  cursor: grab;
+}
+
+.plan-scene-attente,
+.plan-scene-indisponible {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--texte-doux);
+  text-align: center;
+}
+
+.plan-calque-etiquettes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.plan-etiquette {
+  padding: 3px 8px;
+  border-radius: var(--rayon-petit);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.plan-etiquette-salle {
+  color: var(--texte-doux);
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+}
+
+.plan-etiquette-prevue {
+  color: #ffffff;
+  background: #2b5c8f;
+}
+
+.plan-etiquette-vue {
+  color: #ffffff;
+  background: #c2412a;
+}
+
+@media (max-width: 860px) {
+  .plan {
+    grid-template-columns: 1fr;
   }
 }

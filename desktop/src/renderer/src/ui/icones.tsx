@@ -84,6 +84,13 @@ export const IconeEtagere = (p: P) => (
   </Icone>
 );
 
+export const IconePlan = (p: P) => (
+  <Icone {...p}>
+    <path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z" />
+    <path d="m3 12 9 4.5 9-4.5M3 16.5 12 21l9-4.5" />
+  </Icone>
+);
+
 export const IconeBase = (p: P) => (
   <Icone {...p}>
     <ellipse cx="12" cy="5.5" rx="8" ry="3" />

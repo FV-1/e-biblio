@@ -1,7 +1,7 @@
 import type { Exemplaire, Livre } from '../../../commun/api';
 import { Couverture } from '../ui/Couverture';
 import { IdentifiantExemplaire } from '../ui/IdentifiantExemplaire';
-import { IconePlus } from '../ui/icones';
+import { IconePlan, IconePlus } from '../ui/icones';
 import { BadgeStatut } from './BadgeStatut';
 import { CheminLocalisation } from './CheminLocalisation';
 import { formaterDate } from './format';
@@ -9,9 +9,10 @@ import { formaterDate } from './format';
 interface Props {
   readonly exemplaire: Exemplaire;
   readonly onAjouterExemplaire?: ((livre: Livre) => void) | undefined;
+  readonly onVoirSurPlan?: ((exemplaire: Exemplaire) => void) | undefined;
 }
 
-export function CarteExemplaire({ exemplaire, onAjouterExemplaire }: Props) {
+export function CarteExemplaire({ exemplaire, onAjouterExemplaire, onVoirSurPlan }: Props) {
   const { livre, emplacementTheorique, derniereDetection } = exemplaire;
 
   return (
@@ -47,11 +48,18 @@ export function CarteExemplaire({ exemplaire, onAjouterExemplaire }: Props) {
           </section>
         )}
 
-        {onAjouterExemplaire && (
+        {(onAjouterExemplaire || onVoirSurPlan) && (
           <div className="carte-actions">
-            <button type="button" className="bouton-discret" onClick={() => onAjouterExemplaire(livre)}>
-              <IconePlus /> Ajouter un exemplaire
-            </button>
+            {onVoirSurPlan && (
+              <button type="button" className="bouton-discret" onClick={() => onVoirSurPlan(exemplaire)}>
+                <IconePlan /> Voir sur le plan
+              </button>
+            )}
+            {onAjouterExemplaire && (
+              <button type="button" className="bouton-discret" onClick={() => onAjouterExemplaire(livre)}>
+                <IconePlus /> Ajouter un exemplaire
+              </button>
+            )}
           </div>
         )}
       </div>
