@@ -1463,14 +1463,23 @@ textarea:focus-visible {
   background: #c2412a;
 }
 
+.plan-zone {
+  position: relative;
+}
+
 .plan-scene {
   position: relative;
   height: calc(100vh - 150px);
-  min-height: 460px;
+  min-height: 520px;
   overflow: hidden;
   border: 1px solid var(--bordure);
   border-radius: var(--rayon);
   background: var(--surface-2);
+}
+
+.plan-scene:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .plan-scene canvas {
@@ -1524,4 +1533,315 @@ textarea:focus-visible {
   .plan {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Plan 3D : navigation ---------- */
+
+.plan-outils {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.plan-outils button {
+  pointer-events: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte);
+  font-size: 0.85rem;
+  box-shadow: var(--ombre);
+}
+
+.plan-outils button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-outils button:disabled {
+  opacity: 0.5;
+}
+
+.plan-outils-groupe {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.plan-outils-groupe button {
+  min-width: 34px;
+  font-weight: 700;
+}
+
+.plan-outil-salle {
+  font-weight: 600;
+}
+
+.plan-aide-navigation {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte-doux);
+  font-size: 0.78rem;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.plan-infobulle {
+  position: absolute;
+  z-index: 2;
+  padding: 5px 10px;
+  border-radius: var(--rayon-petit);
+  background: var(--texte);
+  color: var(--fond);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.plan-mal-ranges summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.plan-mal-ranges[open] summary {
+  margin-bottom: 8px;
+}
+
+/* ---------- Plan 3D : vue « étagère » ---------- */
+
+.vue-etagere {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, calc(100% - 24px));
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  box-shadow: var(--ombre-forte);
+  animation: entree-vue-etagere 180ms ease-out;
+}
+
+@keyframes entree-vue-etagere {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vue-etagere {
+    animation: none;
+  }
+}
+
+.vue-etagere-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vue-etagere-entete h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.vue-etagere-entete .aide {
+  margin: 2px 0 0;
+}
+
+.vue-etagere-bilan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.puce-statut {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.puce-intrus {
+  background: var(--alerte-fond);
+  color: var(--alerte);
+}
+
+.puce-absent {
+  background: var(--neutre-fond);
+  color: var(--texte-doux);
+}
+
+/* Le meuble vu de face : un cadre en bois, des planches, des tranches debout. */
+.meuble {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 8px 0;
+  border-radius: 6px;
+  background: #8a6a4a;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
+}
+
+.planche {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 96px;
+  margin: 0 0 8px;
+  padding: 6px 8px 0;
+  list-style: none;
+  background: #3a2d22;
+  border-bottom: 8px solid #a7845e;
+  overflow-x: auto;
+}
+
+.planche li {
+  display: flex;
+}
+
+.tranche {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 26px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 3px 3px 0 0;
+  color: #f7f3ea;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: inset -3px 0 0 rgb(0 0 0 / 18%), inset 2px 0 0 rgb(255 255 255 / 12%);
+  transition: transform 120ms ease-out;
+}
+
+.tranche span {
+  max-height: 100%;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tranche:hover,
+.tranche:focus-visible {
+  transform: translateY(-6px);
+}
+
+.tranche:focus-visible {
+  outline: 2px solid #f2c46d;
+  outline-offset: 1px;
+}
+
+.tranche-intrus {
+  outline: 3px solid #e2583f;
+  outline-offset: -3px;
+}
+
+.tranche-absent {
+  border: 2px dashed #c9bfae;
+  background: transparent;
+  color: #d8cfbf;
+}
+
+.tranche-suivie {
+  transform: translateY(-10px);
+  box-shadow: 0 0 0 3px #78aee3;
+}
+
+.tranche-choisie {
+  box-shadow: 0 0 0 3px #f2c46d;
+}
+
+.vue-etagere-fiche {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+}
+
+.vue-etagere-fiche h3 {
+  margin: 0;
+}
+
+.vue-etagere-fiche .aide {
+  margin: 0;
+}
+
+.statut-ligne {
+  margin: 0;
+  font-weight: 600;
+}
+
+.statut-intrus {
+  color: var(--alerte);
+}
+
+.statut-absent {
+  color: var(--texte-doux);
+}
+
+.statut-ici {
+  color: var(--succes);
+}
+
+.vue-etagere-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--texte-doux);
+}
+
+.echantillon {
+  display: inline-block;
+  width: 10px;
+  height: 14px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: -2px;
+}
+
+.echantillon-ici {
+  background: #5b4b8a;
+}
+
+.echantillon-intrus {
+  background: #5b4b8a;
+  outline: 2px solid #e2583f;
+  outline-offset: -2px;
+}
+
+.echantillon-absent {
+  border: 1.5px dashed var(--texte-doux);
 }

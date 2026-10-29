@@ -4,7 +4,7 @@ import type { Emplacement } from '../../../commun/api';
  * Dimensions dessinées d'une étagère, en unités du plan. Le serveur ne stocke
  * que des positions (x, y) : la taille est une convention d'affichage.
  */
-export const ETAGERE = { largeur: 8, profondeur: 1.6, hauteur: 2.4 } as const;
+export const ETAGERE = { largeur: 8, profondeur: 1.5, hauteur: 3.2 } as const;
 
 /** Espace laissé autour des étagères pour dessiner le sol d'une salle. */
 const MARGE_SALLE = 4;
