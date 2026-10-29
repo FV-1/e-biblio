@@ -41,8 +41,8 @@ Légende : `[Personne]`, `[Système]`, `[Conteneur]`, `[Composant]` ; les flèch
 :  | [Conteneur]             |   jeton 128 bits]     | [Conteneur]               |  :
 :  | Client desktop          |<----------------------| Page mobile d'appairage   |  :
 :  | Electron + React        |                       | HTML/JS, sur le téléphone |  :
-:  | Recherche, localisation,|---------------------->| Lit le code-barres        |  :
-:  | base de données, ajout  |  Sert la page         | (BarcodeDetector / ZXing) |  :
+:  | Recherche, plan 3D,     |---------------------->| Lit le code-barres        |  :
+:  | base, ajout             |  Sert la page         | (BarcodeDetector / ZXing) |  :
 :  +-------------------------+                       +---------------------------+  :
 :      |                                                                            :
 :      | Appelle l'API [HTTP/JSON]                                                  :
@@ -142,7 +142,7 @@ Tout tourne sur le réseau local de la bibliothèque : seul l'appel à Open Libr
 | Vue du 01/10 | Code actuel | Raison |
 | --- | --- | --- |
 | Conteneur « PWA mobile » relié au serveur API | Page mobile servie par le client desktop | Caméra interdite en HTTP sur mobile (ADR-005) |
-| WebSocket (temps réel) entre serveur et clients | Non réalisé | Hors périmètre de cette version ; l'événement `ExemplaireDetecte` passe par le port `EventPublisher`, prêt pour un adapter WebSocket |
+| WebSocket (temps réel) entre serveur et clients | Interrogation toutes les 3 s par le plan 3D | Pas de changement serveur avant la soutenance ; un flux SSE via le port `EventPublisher` est la cible (ADR-007) |
 | Prêts, emprunts, personne « Lecteur » | Non réalisés | Hors périmètre de cette version |
 | Composant « Sources de localisation QR / RFID » | Route `POST /detections` | Un seul point d'entrée pour toutes les sources de scan |
-| Plan interactif SVG | Non réalisé | Les coordonnées des emplacements sont déjà calculées par l'API |
+| Plan interactif SVG | Plan 3D (Three.js) dans le client desktop | Demande du client ; calculé à partir des coordonnées de l'API (ADR-007) |

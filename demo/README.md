@@ -23,7 +23,7 @@ Vérifier dans l'app : onglet **Base de données**, 35 œuvres. Agrandir la poli
 
 ## 1. Tranche verticale (0:00 → 1:45)
 
-1. **Rechercher** (`Ctrl+K`), taper `emile` : les livres de Zola s'affichent, accents ignorés. Ouvrir *Germinal*, exemplaire n°2 : rangé en *Étage 1 › Salle A › Rayon Romans › Étagère Romans 3*.
+1. **Rechercher** (`Ctrl+K`), taper `emile` : les livres de Zola s'affichent, accents ignorés. *Germinal*, exemplaire n°2 : rangé en *Étage 1 › Salle A › Rayon Romans › Étagère Romans 3*. Cliquer sur **Voir sur le plan** : l'onglet Plan 3D s'ouvre, repère bleu sur l'étagère.
 2. **Scan simulé** dans le terminal 3 (un lecteur QR ou RFID enverrait la même requête) :
 
    ```powershell
@@ -31,7 +31,7 @@ Vérifier dans l'app : onglet **Base de données**, 35 œuvres. Agrandir la poli
    ```
 
 3. Montrer le terminal 1 : `[evenement] ExemplaireDetecte … "malRange":true`.
-4. Dans l'app, relancer la recherche `germinal` : l'exemplaire n°2 est **mal rangé**, vu en *Salle B › Rayon Sciences*. Le filtre « Mal rangés » en montre maintenant 8.
+4. Sur le plan, **sans rien toucher** : en 3 s au plus, un repère rouge apparaît sur *Étagère Sciences 1* en Salle B, avec un arc depuis la place prévue ; le panneau passe à « Mal rangé ».
 
 À dire : « Le scan traverse toutes les couches : route Express, cas d'usage `EnregistrerDetection`, règle du domaine `estMalRange`, enregistrement SQLite, puis publication de l'événement par le port `EventPublisher`. »
 

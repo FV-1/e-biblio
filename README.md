@@ -86,6 +86,11 @@ L'adresse du serveur se règle de trois façons, par ordre de priorité :
   - Filtre texte, filtres « avec / sans ISBN » et « avec / sans couverture » (pratique pour repérer les notices à compléter).
   - Tri en cliquant sur les en-têtes, pagination par 25, 50 ou 100.
   - Un clic sur une ligne la **déplie** pour afficher chaque exemplaire, sa localisation et l'endroit où il a été vu s'il est mal rangé.
+- **Plan 3D** : la bibliothèque en volume (salles, étagères colorées par rayon), calculée à partir des coordonnées des emplacements.
+  - Cherchez un livre dans le panneau de gauche, ou cliquez sur **Voir sur le plan** depuis une carte de la recherche.
+  - Sa place prévue est marquée en bleu. S'il est mal rangé, l'étagère où il a été vu est marquée en rouge, avec un arc entre les deux.
+  - La position est vérifiée toutes les 3 s : après un scan, le repère se déplace tout seul. Glisser pour tourner, molette pour zoomer.
+  - Il faut WebGL (activé par défaut). Sinon, l'onglet l'indique et la localisation reste affichée en texte.
 - **Ajouter un livre**, de trois façons :
   1. **Par ISBN** : la notice (titre, auteurs, couverture) est affichée pour vérification avant l'ajout. Si l'ISBN est inconnu ou si Open Library ne répond pas, un bouton bascule vers la saisie manuelle en conservant l'ISBN.
   2. **Avec le téléphone** : l'application affiche un QR code. Scannez-le avec l'appareil photo du téléphone, puis photographiez le code-barres du livre ; la notice s'affiche aussitôt sur l'ordinateur. Il n'y a rien à installer sur le téléphone, et la session reste active pour scanner plusieurs livres à la suite.
@@ -246,6 +251,7 @@ desktop/src/
 └── renderer/   React : les composants ne dépendent que du port, fourni par un contexte React
     ├── recherche/  Écran de recherche, cartes, filtres
     ├── base/       Vue « base de données » : tableau des œuvres, tri, pagination
+    ├── plan/       Plan 3D : disposition (fonction pure) et scène Three.js
     ├── ajout/      Écran d'ajout : ISBN, saisie manuelle, choix de l'étagère
     └── telephone/  Session d'appairage, QR code
 ```
