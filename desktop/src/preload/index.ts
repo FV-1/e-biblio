@@ -14,6 +14,7 @@ const service: ServiceBibliotheque = {
   ajouterExemplaire: (demande) => ipcRenderer.invoke(CANAUX_IPC.ajouterExemplaire, demande),
   listerLivres: (criteres) => ipcRenderer.invoke(CANAUX_IPC.listerLivres, criteres),
   listerExemplairesDuLivre: (livreId) => ipcRenderer.invoke(CANAUX_IPC.listerExemplairesDuLivre, livreId),
+  listerExemplairesDeLEmplacement: (emplacementId) => ipcRenderer.invoke(CANAUX_IPC.listerExemplairesDeLEmplacement, emplacementId),
   lireConfiguration: () => ipcRenderer.invoke(CANAUX_IPC.lireConfiguration),
   modifierUrlServeur: (url) => ipcRenderer.invoke(CANAUX_IPC.modifierUrlServeur, url),
   demarrerAppairage: () => ipcRenderer.invoke(CANAUX_IPC.demarrerAppairage),

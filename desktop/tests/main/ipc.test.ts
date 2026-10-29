@@ -44,6 +44,10 @@ function serviceEspion() {
       appels.push({ methode: 'listerExemplairesDuLivre', argument: livreId });
       return succes([]);
     },
+    listerExemplairesDeLEmplacement: async (emplacementId) => {
+      appels.push({ methode: 'listerExemplairesDeLEmplacement', argument: emplacementId });
+      return succes([]);
+    },
     demarrerAppairage: async () => {
       appels.push({ methode: 'demarrerAppairage', argument: undefined });
       return succes({ adresses: [] });
@@ -123,9 +127,11 @@ describe('brancherIpc', () => {
     const criteres = { terme: 'zola', tri: 'titre', ordre: 'asc', page: 1, parPage: 25 };
     await appeler(CANAUX_IPC.listerLivres, criteres);
     await appeler(CANAUX_IPC.listerExemplairesDuLivre, 'livre-1');
+    await appeler(CANAUX_IPC.listerExemplairesDeLEmplacement, 'etagere-1-1-1');
     expect(appels).toEqual([
       { methode: 'listerLivres', argument: criteres },
       { methode: 'listerExemplairesDuLivre', argument: 'livre-1' },
+      { methode: 'listerExemplairesDeLEmplacement', argument: 'etagere-1-1-1' },
     ]);
   });
 
@@ -135,6 +141,8 @@ describe('brancherIpc', () => {
     [CANAUX_IPC.listerLivres, { tri: 'titre', ordre: 'asc', page: 1, parPage: 1000 }],
     [CANAUX_IPC.listerExemplairesDuLivre, ''],
     [CANAUX_IPC.listerExemplairesDuLivre, 12],
+    [CANAUX_IPC.listerExemplairesDeLEmplacement, ''],
+    [CANAUX_IPC.listerExemplairesDeLEmplacement, null],
     [CANAUX_IPC.consulterNotice, 42],
     [CANAUX_IPC.consulterNotice, ''],
     [CANAUX_IPC.ajouterExemplaire, { emplacementId: 'e1' }],

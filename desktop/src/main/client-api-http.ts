@@ -78,6 +78,10 @@ export class ClientApiHttp implements ServiceRecherche {
     return this.get(`/exemplaires?livreId=${encodeURIComponent(livreId)}`, schemaListeExemplaires);
   }
 
+  async listerExemplairesDeLEmplacement(emplacementId: string): Promise<Resultat<Exemplaire[]>> {
+    return this.get(`/exemplaires?emplacementId=${encodeURIComponent(emplacementId)}`, schemaListeExemplaires);
+  }
+
   private get<T>(chemin: string, schema: z.ZodType<T>): Promise<Resultat<T>> {
     return this.requete('GET', chemin, schema);
   }

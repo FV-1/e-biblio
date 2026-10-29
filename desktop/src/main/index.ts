@@ -47,6 +47,7 @@ function composerService(): { service: ServiceInvocable; arreter: () => Promise<
     ajouterExemplaire: (demande) => client.ajouterExemplaire(demande),
     listerLivres: (criteres) => client.listerLivres(criteres),
     listerExemplairesDuLivre: (livreId) => client.listerExemplairesDuLivre(livreId),
+    listerExemplairesDeLEmplacement: (emplacementId) => client.listerExemplairesDeLEmplacement(emplacementId),
     lireConfiguration: () => configuration.lireConfiguration(),
     modifierUrlServeur: (url) => configuration.modifierUrlServeur(url),
     demarrerAppairage: () => appairage.demarrer(),

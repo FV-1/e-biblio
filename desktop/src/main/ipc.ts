@@ -40,6 +40,11 @@ export function brancherIpc(ipc: Pick<IpcMain, 'handle'>, service: ServiceInvoca
     return valide.success ? service.listerExemplairesDuLivre(valide.data) : invalide('Identifiant de livre invalide');
   });
 
+  ipc.handle(CANAUX_IPC.listerExemplairesDeLEmplacement, async (_evenement, emplacementId: unknown) => {
+    const valide = z.string().min(1).max(200).safeParse(emplacementId);
+    return valide.success ? service.listerExemplairesDeLEmplacement(valide.data) : invalide('Identifiant d’emplacement invalide');
+  });
+
   ipc.handle(CANAUX_IPC.demarrerAppairage, async () => service.demarrerAppairage());
 
   ipc.handle(CANAUX_IPC.arreterAppairage, async () => service.arreterAppairage());

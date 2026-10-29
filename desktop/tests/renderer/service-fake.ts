@@ -47,6 +47,13 @@ export class ServiceFake implements ServiceBibliotheque {
   reponseLivres: (criteres: CriteresLivres) => Promise<Resultat<PageLivres>> = async (c) =>
     succes({ livres: [], total: 0, page: c.page, parPage: c.parPage, pages: 1 });
   reponseExemplairesDuLivre: (livreId: string) => Promise<Resultat<Exemplaire[]>> = async () => succes([]);
+  readonly etageresDemandees: string[] = [];
+  reponseExemplairesDeLEmplacement: (emplacementId: string) => Promise<Resultat<Exemplaire[]>> = async () => succes([]);
+
+  listerExemplairesDeLEmplacement(emplacementId: string): Promise<Resultat<Exemplaire[]>> {
+    this.etageresDemandees.push(emplacementId);
+    return this.reponseExemplairesDeLEmplacement(emplacementId);
+  }
 
   listerLivres(criteres: CriteresLivres): Promise<Resultat<PageLivres>> {
     this.listesDemandees.push(criteres);

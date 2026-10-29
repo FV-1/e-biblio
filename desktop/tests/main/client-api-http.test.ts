@@ -171,6 +171,12 @@ describe('ClientApiHttp : emplacements, notices et ajout', () => {
     expect(requetes[0]?.url).toBe('/exemplaires');
   });
 
+  it('liste le contenu d’une étagère', async () => {
+    const { c, requetes } = clientEspion(json([exemplaireMalRange]));
+    expect(await c.listerExemplairesDeLEmplacement('etagere-1-1-3')).toEqual({ ok: true, valeur: [exemplaireMalRange] });
+    expect(requetes[0]?.url).toBe('/exemplaires');
+  });
+
   it('transmet l’erreur métier d’un ajout refusé', async () => {
     const { c } = clientEspion(json({ erreur: { code: 'CATALOGUE_INDISPONIBLE', message: 'hors ligne' } }, 422));
     expect(await c.ajouterExemplaire({ emplacementId: 'e1', livre: { type: 'isbn', isbn: '9782070368228' } })).toEqual({

@@ -39,6 +39,8 @@ export interface ServiceRecherche {
   /** Vue « base de données » : œuvres filtrées, triées et paginées. */
   listerLivres(criteres: CriteresLivres): Promise<Resultat<PageLivres>>;
   listerExemplairesDuLivre(livreId: string): Promise<Resultat<Exemplaire[]>>;
+  /** Contenu d'une étagère : exemplaires qui y sont rangés ou qui y ont été vus en dernier. */
+  listerExemplairesDeLEmplacement(emplacementId: string): Promise<Resultat<Exemplaire[]>>;
 }
 
 /** Réglages du client (implémenté par le stockage de configuration). */
@@ -93,6 +95,7 @@ export const CANAUX_IPC = {
   ajouterExemplaire: 'biblio:ajouter-exemplaire',
   listerLivres: 'biblio:lister-livres',
   listerExemplairesDuLivre: 'biblio:lister-exemplaires-du-livre',
+  listerExemplairesDeLEmplacement: 'biblio:lister-exemplaires-de-l-emplacement',
   lireConfiguration: 'biblio:lire-configuration',
   modifierUrlServeur: 'biblio:modifier-url-serveur',
   demarrerAppairage: 'biblio:demarrer-appairage',
