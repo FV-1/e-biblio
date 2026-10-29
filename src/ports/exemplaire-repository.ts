@@ -18,6 +18,11 @@ export interface ExemplaireRepository {
   trouverMalRanges(): Promise<Exemplaire[]>;
   /** Exemplaires d'un livre, dans l'ordre de leur numéro. */
   trouverParLivre(livreId: string): Promise<Exemplaire[]>;
+  /**
+   * Exemplaires rangés sur cet emplacement OU détectés en dernier dessus (un
+   * exemplaire mal rangé apparaît donc sur deux étagères), dans l'ordre de leur identifiant.
+   */
+  trouverParEmplacement(emplacementId: string): Promise<Exemplaire[]>;
   /** Vrai si au moins un exemplaire y est rangé ou y a été détecté en dernier. */
   existeAvecEmplacement(emplacementId: string): Promise<boolean>;
 }

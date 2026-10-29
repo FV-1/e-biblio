@@ -175,6 +175,13 @@ export function contratRepositories(nom: string, fabrique: () => Repositories): 
         expect(ids(await repos.exemplaires.trouverMalRanges())).toEqual(['ex-mal']);
       });
 
+      it('trouverParEmplacement renvoie les exemplaires rangés ou vus en dernier sur l’emplacement', async () => {
+        // ex-mal est rangé sur R1 mais a été vu sur R2 : il apparaît sur les deux.
+        expect(ids(await repos.exemplaires.trouverParEmplacement('etagere-r1'))).toEqual(['ex-bien', 'ex-jamais', 'ex-mal']);
+        expect(ids(await repos.exemplaires.trouverParEmplacement('etagere-r2'))).toEqual(['ex-mal', 'ex-manuscrit']);
+        expect(await repos.exemplaires.trouverParEmplacement('rayon-romans')).toEqual([]);
+      });
+
       it('existeAvecEmplacement tient compte des positions théorique et constatée', async () => {
         expect(await repos.exemplaires.existeAvecEmplacement('etagere-r1')).toBe(true);
         expect(await repos.exemplaires.existeAvecEmplacement('etagere-r2')).toBe(true);

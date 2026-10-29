@@ -123,6 +123,7 @@ Toutes les requêtes et réponses sont au format JSON. Le fichier [`requests.htt
 | `GET` | `/livres/:isbn` | Aperçu de la notice d'un ISBN (base ou Open Library), **sans rien enregistrer** | 200 |
 | `GET` | `/exemplaires?q=…` | Recherche par titre, auteur ou ISBN, avec la localisation complète | 200 |
 | `GET` | `/exemplaires?livreId=…` | Tous les exemplaires d'une œuvre, avec leur localisation | 200 |
+| `GET` | `/exemplaires?emplacementId=…` | Contenu d'une étagère : exemplaires qui y sont rangés ou qui y ont été vus en dernier (vue « étagère » du plan 3D) | 200 |
 | `GET` | `/livres` | Toutes les œuvres, avec leurs compteurs (vue « base de données »), voir les paramètres ci-dessous | 200 |
 | `GET` | `/exemplaires/mal-ranges` | Exemplaires dont la position constatée diffère de la position théorique | 200 |
 | `GET` | `/exemplaires/:id` | Détail et localisation d'un exemplaire | 200 |

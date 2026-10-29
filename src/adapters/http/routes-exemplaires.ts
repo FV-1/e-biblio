@@ -3,6 +3,7 @@ import type { AjouterExemplaire, LivreAAjouter } from '../../application/exempla
 import type { ConsulterExemplaire } from '../../application/exemplaires/consulter-exemplaire.js';
 import type { ListerExemplairesMalRanges } from '../../application/exemplaires/lister-exemplaires-mal-ranges.js';
 import type { RechercherExemplaires } from '../../application/exemplaires/rechercher-exemplaires.js';
+import type { ListerExemplairesDeLEmplacement } from '../../application/exemplaires/lister-exemplaires-de-l-emplacement.js';
 import type { ListerExemplairesDuLivre } from '../../application/exemplaires/lister-exemplaires-du-livre.js';
 import { corpsAjouterExemplaire, parametresId, requeteExemplaires } from './schemas.js';
 
@@ -10,6 +11,7 @@ export interface CasUsageExemplaires {
   ajouter: AjouterExemplaire;
   rechercher: RechercherExemplaires;
   listerDuLivre: ListerExemplairesDuLivre;
+  listerDeLEmplacement: ListerExemplairesDeLEmplacement;
   consulter: ConsulterExemplaire;
   listerMalRanges: ListerExemplairesMalRanges;
 }
@@ -22,7 +24,9 @@ export function routesExemplaires(cas: CasUsageExemplaires): Router {
     res.json(
       requete.livreId !== undefined
         ? await cas.listerDuLivre.executer(requete.livreId)
-        : await cas.rechercher.executer(requete.q),
+        : requete.emplacementId !== undefined
+          ? await cas.listerDeLEmplacement.executer(requete.emplacementId)
+          : await cas.rechercher.executer(requete.q),
     );
   });
 

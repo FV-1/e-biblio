@@ -219,6 +219,9 @@ GET {{baseUrl}}/livres?q=hugo&tri=malRanges&ordre=desc&parPage=10&page=1
 ### Exemplaires d'une œuvre (ligne dépliée de la vue « base de données »)
 GET {{baseUrl}}/exemplaires?livreId={{ajoutManuel.response.body.livreId}}
 
+### Contenu d'une étagère : rangés dessus ou vus dessus en dernier (vue « étagère » du plan 3D)
+GET {{baseUrl}}/exemplaires?emplacementId=etagere-1-1-1
+
 ### [Erreur 400] Tri inconnu
 GET {{baseUrl}}/livres?tri=pirate
 

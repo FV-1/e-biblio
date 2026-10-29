@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ListerExemplairesDeLEmplacement } from '../../../src/application/exemplaires/lister-exemplaires-de-l-emplacement.js';
 import { ListerExemplairesDuLivre } from '../../../src/application/exemplaires/lister-exemplaires-du-livre.js';
 import { ListerLivres } from '../../../src/application/livres/lister-livres.js';
 import { Exemplaire } from '../../../src/domain/exemplaire.js';
@@ -83,5 +84,28 @@ describe('ListerExemplairesDuLivre', () => {
     await ctx.livres.enregistrer(autre);
     await ctx.exemplaires.enregistrer(Exemplaire.creer({ id: 'ex-autre', livre: autre, numero: 1, emplacement: ctx.hierarchie.etagere2 }));
     expect((await lister().executer('livre-hugo')).map((v) => v.id)).toEqual(['ex-1', 'ex-2']);
+  });
+});
+
+describe('ListerExemplairesDeLEmplacement', () => {
+  const lister = () => new ListerExemplairesDeLEmplacement(ctx.exemplaires, ctx.livres, ctx.emplacements);
+
+  it('renvoie les exemplaires rangés sur l’étagère, avec leur statut', async () => {
+    const vues = await lister().executer('etagere-r1');
+    expect(vues.map((v) => [v.id, v.malRange])).toEqual([
+      ['ex-1', true],
+      ['ex-2', false],
+    ]);
+  });
+
+  it('inclut les exemplaires vus sur l’étagère alors qu’ils sont rangés ailleurs', async () => {
+    const vues = await lister().executer('etagere-r2');
+    expect(vues.map((v) => [v.id, v.emplacementTheorique.emplacementId, v.derniereDetection?.emplacementId])).toEqual([
+      ['ex-1', 'etagere-r1', 'etagere-r2'],
+    ]);
+  });
+
+  it('échoue si l’emplacement n’existe pas', async () => {
+    await expect(lister().executer('fantome')).rejects.toThrow(expect.objectContaining({ code: 'EMPLACEMENT_INTROUVABLE' }));
   });
 });

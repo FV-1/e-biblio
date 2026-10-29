@@ -4,14 +4,14 @@ import { corpsAjouterExemplaire, requeteExemplaires, requeteLivres } from '../..
 /** Validation des entrées HTTP (forme uniquement ; les règles métier restent dans le domaine). */
 describe('schémas HTTP', () => {
   describe('GET /exemplaires', () => {
-    it.each([[{ q: ' hugo ' }, { q: 'hugo' }], [{ livreId: 'livre-1' }, { livreId: 'livre-1' }]])(
+    it.each([[{ q: ' hugo ' }, { q: 'hugo' }], [{ livreId: 'livre-1' }, { livreId: 'livre-1' }], [{ emplacementId: 'etagere-1-1-1' }, { emplacementId: 'etagere-1-1-1' }]])(
       'accepte %j',
       (requete, attendu) => {
         expect(requeteExemplaires.parse(requete)).toEqual(attendu);
       },
     );
 
-    it.each([{}, { q: '' }, { q: 'a', livreId: 'b' }, { livreId: '' }])('refuse %j', (requete) => {
+    it.each([{}, { q: '' }, { q: 'a', livreId: 'b' }, { livreId: '' }, { emplacementId: '' }, { livreId: 'a', emplacementId: 'b' }])('refuse %j', (requete) => {
       expect(requeteExemplaires.safeParse(requete).success).toBe(false);
     });
   });

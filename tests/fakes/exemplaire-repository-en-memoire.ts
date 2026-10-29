@@ -37,6 +37,12 @@ export class ExemplaireRepositoryEnMemoire implements ExemplaireRepository {
       .sort((a, b) => a.numero - b.numero);
   }
 
+  async trouverParEmplacement(emplacementId: string): Promise<Exemplaire[]> {
+    return this.tous()
+      .filter((e) => e.emplacementId === emplacementId || e.derniereDetection?.emplacementId === emplacementId)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
   async existeAvecEmplacement(emplacementId: string): Promise<boolean> {
     return this.tous().some(
       (e) => e.emplacementId === emplacementId || e.derniereDetection?.emplacementId === emplacementId,

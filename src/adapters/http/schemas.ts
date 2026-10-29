@@ -64,14 +64,22 @@ export const corpsAjouterExemplaire = z
 
 export const parametresIsbn = z.object({ isbn: z.string().trim().min(1).max(30) });
 
-/** GET /exemplaires : recherche (q) OU exemplaires d'une œuvre (livreId), l'un des deux exactement. */
+/**
+ * GET /exemplaires : recherche (q), exemplaires d'une œuvre (livreId) OU contenu
+ * d'une étagère (emplacementId), exactement l'un des trois.
+ */
 export const requeteExemplaires = z.union(
   [
     // `z.undefined().optional()` : avec zod 4, `z.undefined()` seul rendrait la clé obligatoire.
-    z.object({ q: z.string().trim().min(1, 'Le paramètre « q » est obligatoire').max(200), livreId: z.undefined().optional() }),
-    z.object({ livreId: identifiant, q: z.undefined().optional() }),
+    z.object({
+      q: z.string().trim().min(1, 'Le paramètre « q » est obligatoire').max(200),
+      livreId: z.undefined().optional(),
+      emplacementId: z.undefined().optional(),
+    }),
+    z.object({ livreId: identifiant, q: z.undefined().optional(), emplacementId: z.undefined().optional() }),
+    z.object({ emplacementId: identifiant, q: z.undefined().optional(), livreId: z.undefined().optional() }),
   ],
-  { error: 'Indiquez soit « q » (recherche), soit « livreId » (exemplaires d’une œuvre)' },
+  { error: 'Indiquez soit « q » (recherche), soit « livreId » (exemplaires d’une œuvre), soit « emplacementId » (contenu d’une étagère)' },
 );
 
 const avecOuSans = z.enum(['avec', 'sans']).transform((v) => v === 'avec');

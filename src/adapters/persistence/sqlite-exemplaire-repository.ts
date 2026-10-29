@@ -41,6 +41,9 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
         ORDER BY detection_date DESC, id
       `),
       parLivre: db.prepare<[string], LigneExemplaire>('SELECT * FROM exemplaires WHERE livre_id = ? ORDER BY numero'),
+      parEmplacement: db.prepare<[{ id: string }], LigneExemplaire>(
+        'SELECT * FROM exemplaires WHERE emplacement_id = @id OR detection_emplacement_id = @id ORDER BY id',
+      ),
       existeAvecEmplacement: db.prepare<[{ id: string }], { existe: number }>(`
         SELECT EXISTS (
           SELECT 1 FROM exemplaires WHERE emplacement_id = @id OR detection_emplacement_id = @id
@@ -81,6 +84,10 @@ export class SqliteExemplaireRepository implements ExemplaireRepository {
 
   async trouverParLivre(livreId: string): Promise<Exemplaire[]> {
     return this.requetes.parLivre.all(livreId).map(versEntite);
+  }
+
+  async trouverParEmplacement(emplacementId: string): Promise<Exemplaire[]> {
+    return this.requetes.parEmplacement.all({ id: emplacementId }).map(versEntite);
   }
 
   async existeAvecEmplacement(emplacementId: string): Promise<boolean> {

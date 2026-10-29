@@ -18,6 +18,7 @@ import { AjouterExemplaire } from './application/exemplaires/ajouter-exemplaire.
 import { ConsulterExemplaire } from './application/exemplaires/consulter-exemplaire.js';
 import { ListerExemplairesMalRanges } from './application/exemplaires/lister-exemplaires-mal-ranges.js';
 import { RechercherExemplaires } from './application/exemplaires/rechercher-exemplaires.js';
+import { ListerExemplairesDeLEmplacement } from './application/exemplaires/lister-exemplaires-de-l-emplacement.js';
 import { ListerExemplairesDuLivre } from './application/exemplaires/lister-exemplaires-du-livre.js';
 import { ConsulterNotice } from './application/livres/consulter-notice.js';
 import { ListerLivres } from './application/livres/lister-livres.js';
@@ -60,6 +61,7 @@ function main(): void {
       consulter: new ConsulterExemplaire(exemplaires, livres, emplacements),
       listerMalRanges: new ListerExemplairesMalRanges(exemplaires, livres, emplacements),
       listerDuLivre: new ListerExemplairesDuLivre(exemplaires, livres, emplacements),
+      listerDeLEmplacement: new ListerExemplairesDeLEmplacement(exemplaires, livres, emplacements),
     },
     livres: {
       consulterNotice: new ConsulterNotice(livres, catalogue),
