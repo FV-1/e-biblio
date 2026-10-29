@@ -3,35 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
-    <title>e-biblio · Scanner un livre</title>
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f1216" />
+    <title>e-biblio · Scanner des livres</title>
     <link rel="stylesheet" href="page.css" />
   </head>
   <body>
-    <main>
-      <header>
-        <h1>e-biblio</h1>
-        <p>Scanner le code-barres d’un livre</p>
+    <div class="app">
+      <header class="barre">
+        <span class="marque">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h3v16H4zM9 4h3v16H9zM14.5 5.2l2.9-.8 4.1 15.5-2.9.8z" /></svg>
+          e-biblio
+        </span>
+        <span id="connexion" class="pastille pastille-ok">Relié à l’ordinateur</span>
       </header>
 
-      <label class="bouton-photo" for="photo">
-        <span aria-hidden="true">📷</span> Photographier le code-barres
-      </label>
-      <input id="photo" type="file" accept="image/*" capture="environment" />
-      <p class="aide">Cadrez le code-barres au dos du livre, bien à plat et sans reflet.</p>
-
-      <div id="etat" role="status" aria-live="polite" hidden></div>
-
-      <form id="formulaire">
-        <label for="isbn">ou saisir l’ISBN</label>
-        <div class="ligne">
-          <input id="isbn" inputmode="numeric" autocomplete="off" placeholder="978…" />
-          <button type="submit">Envoyer</button>
+      <!-- Caméra en direct : le code-barres est lu tout seul, sans appuyer sur rien. -->
+      <section id="camera" class="camera" hidden aria-label="Caméra">
+        <video id="video" playsinline muted autoplay></video>
+        <div id="viseur" class="viseur" aria-hidden="true">
+          <span class="coin coin-hg"></span><span class="coin coin-hd"></span><span class="coin coin-bg"></span><span class="coin coin-bd"></span>
+          <span class="laser"></span>
         </div>
-      </form>
+        <p id="consigne" class="consigne">Placez le code-barres du livre dans le cadre</p>
+        <div class="commandes">
+          <button id="lampe" type="button" class="rond" aria-pressed="false" aria-label="Allumer la lampe" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6l-1 6h3l-7 14 1-9H8z" /></svg>
+          </button>
+          <button id="ouvrir-saisie" type="button" class="rond" aria-label="Saisir l’ISBN au clavier">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM6 9h2M10 9h2M14 9h2M6 12h2M10 12h2M14 12h2M7 15h10" /></svg>
+          </button>
+        </div>
+      </section>
 
-      <p class="pied">L’ISBN s’affiche aussitôt sur l’ordinateur.</p>
-    </main>
+      <!-- Avant la caméra, ou si elle n'est pas disponible. -->
+      <section id="accueil" class="accueil">
+        <div class="illustration" aria-hidden="true">
+          <svg viewBox="0 0 64 40"><path d="M4 4v32M9 4v32M12 4v32M17 4v32M21 4v32M24 4v32M29 4v32M33 4v32M36 4v32M41 4v32M45 4v32M48 4v32M53 4v32M56 4v32M60 4v32" /></svg>
+        </div>
+        <h1>Scanner des livres</h1>
+        <p>Visez le code-barres au dos du livre : il est lu tout seul et l’ISBN s’affiche sur l’ordinateur.</p>
+        <button id="demarrer" type="button" class="principal">Activer la caméra</button>
+        <p id="probleme" class="probleme" role="alert" hidden></p>
+        <label id="lien-photo" class="lien" for="photo" hidden>Prendre une photo du code-barres à la place</label>
+        <input id="photo" type="file" accept="image/*" capture="environment" hidden />
+      </section>
+
+      <section class="tiroir" aria-label="Livres envoyés">
+        <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+
+        <form id="saisie" class="saisie" hidden>
+          <label for="isbn">ISBN du livre</label>
+          <div class="ligne">
+            <input id="isbn" inputmode="numeric" autocomplete="off" enterkeyhint="send" placeholder="978…" />
+            <button type="submit" class="principal">Envoyer</button>
+          </div>
+        </form>
+
+        <h2>Envoyés à l’ordinateur <span id="compte" class="compte">0</span></h2>
+        <ol id="historique" class="historique"></ol>
+        <p id="vide" class="vide">Les livres scannés apparaîtront ici.</p>
+      </section>
+    </div>
 
     <script src="zxing.js"></script>
     <script src="decodeur.js"></script>

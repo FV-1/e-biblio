@@ -11,8 +11,26 @@ import { beforeAll, describe, expect, it } from 'vitest';
 interface Decodeur {
   niveauxDeGris(rgba: Uint8ClampedArray, largeur: number, hauteur: number): Uint8ClampedArray;
   rotation90(gris: Uint8ClampedArray, largeur: number, hauteur: number): Uint8ClampedArray;
-  decoder(zxing: typeof ZXing, gris: Uint8ClampedArray, largeur: number, hauteur: number): string | null;
+  decoder(
+    zxing: typeof ZXing,
+    gris: Uint8ClampedArray,
+    largeur: number,
+    hauteur: number,
+    options?: { rapide: boolean; tourne?: boolean },
+  ): string | null;
   estIsbn(texte: string): boolean;
+  zoneAnalyse(z: {
+    largeurVideo: number;
+    hauteurVideo: number;
+    largeurElement: number;
+    hauteurElement: number;
+    viseur: { x: number; y: number; largeur: number; hauteur: number };
+    marge?: number;
+  }): { x: number; y: number; largeur: number; hauteur: number };
+  creerConfirmateur(options: { lecturesRequises?: number; fenetreMs?: number; absenceMs?: number }): {
+    proposer(texte: string, maintenant: number): 'confirme' | 'attente' | 'deja-envoye' | 'pas-un-isbn';
+    oublier(texte: string): void;
+  };
 }
 
 let D: Decodeur;
@@ -83,5 +101,89 @@ describe('décodeur de la page mobile', () => {
     ['12345', false],
   ])('estIsbn(%s) = %s', (texte, attendu) => {
     expect(D.estIsbn(texte)).toBe(attendu);
+  });
+});
+
+describe('scanner vidéo de la page mobile', () => {
+  it('lit une image vidéo en mode rapide, dans les deux orientations', () => {
+    const { rgba, largeur, hauteur } = imageEan13('9782070612758');
+    const gris = D.niveauxDeGris(rgba, largeur, hauteur);
+    expect(D.decoder(ZXing, gris, largeur, hauteur, { rapide: true })).toBe('9782070612758');
+    const tourne = D.rotation90(gris, largeur, hauteur);
+    expect(D.decoder(ZXing, tourne, hauteur, largeur, { rapide: true })).toBeNull(); // pas de rotation implicite
+    expect(D.decoder(ZXing, tourne, hauteur, largeur, { rapide: true, tourne: true })).not.toBeNull();
+  });
+
+  it('ramène le viseur affiché à l’écran en pixels de la vidéo (object-fit: cover)', () => {
+    // Vidéo 1280×720 affichée dans un élément 360×640 : agrandie ×0,889, rognée sur les côtés.
+    const zone = D.zoneAnalyse({
+      largeurVideo: 1280,
+      hauteurVideo: 720,
+      largeurElement: 360,
+      hauteurElement: 640,
+      viseur: { x: 40, y: 260, largeur: 280, hauteur: 120 },
+    });
+    expect(zone.largeur).toBeCloseTo(315, 0);
+    expect(zone.hauteur).toBeCloseTo(135, 0);
+    expect(zone.x).toBe(483); // (40 + 388,9) / 0,889 = 482,5 : le viseur est au centre de la vidéo
+    expect(zone.y).toBeCloseTo(293, 0);
+  });
+
+  it('ne sort jamais de l’image, même avec une marge autour du viseur', () => {
+    const zone = D.zoneAnalyse({
+      largeurVideo: 640,
+      hauteurVideo: 480,
+      largeurElement: 640,
+      hauteurElement: 480,
+      viseur: { x: 0, y: 0, largeur: 640, hauteur: 480 },
+      marge: 0.2,
+    });
+    expect(zone).toEqual({ x: 0, y: 0, largeur: 640, hauteur: 480 });
+  });
+
+  describe('confirmation des lectures', () => {
+    const confirmateur = () => D.creerConfirmateur({ lecturesRequises: 2, fenetreMs: 1500, absenceMs: 2500 });
+
+    it('n’envoie qu’après deux lectures identiques rapprochées', () => {
+      const c = confirmateur();
+      expect(c.proposer('9782070612758', 0)).toBe('attente');
+      expect(c.proposer('9782070612758', 200)).toBe('confirme');
+    });
+
+    it('repart de zéro si une autre lecture s’intercale ou si trop de temps passe', () => {
+      const c = confirmateur();
+      expect(c.proposer('9782070612758', 0)).toBe('attente');
+      expect(c.proposer('9780306406157', 100)).toBe('attente');
+      expect(c.proposer('9782070612758', 200)).toBe('attente');
+      expect(c.proposer('9782070612758', 5000)).toBe('attente');
+    });
+
+    it('n’envoie jamais deux fois un livre resté devant l’objectif, même longtemps', () => {
+      const c = confirmateur();
+      c.proposer('9782070612758', 0);
+      c.proposer('9782070612758', 100);
+      for (let t = 300; t <= 20_000; t += 200) expect(c.proposer('9782070612758', t)).toBe('deja-envoye');
+    });
+
+    it('accepte à nouveau le même ISBN après une absence (deuxième exemplaire du livre)', () => {
+      const c = confirmateur();
+      c.proposer('9782070612758', 0);
+      c.proposer('9782070612758', 100);
+      expect(c.proposer('9782070612758', 3000)).toBe('attente'); // retiré 2,9 s, puis présenté à nouveau
+      expect(c.proposer('9782070612758', 3200)).toBe('confirme');
+    });
+
+    it('signale un code-barres qui n’est pas celui d’un livre', () => {
+      expect(confirmateur().proposer('3017620422003', 0)).toBe('pas-un-isbn');
+    });
+
+    it('permet de renvoyer un ISBN dont l’envoi a échoué', () => {
+      const c = confirmateur();
+      c.proposer('9782070612758', 0);
+      c.proposer('9782070612758', 100);
+      c.oublier('9782070612758');
+      c.proposer('9782070612758', 200);
+      expect(c.proposer('9782070612758', 300)).toBe('confirme');
+    });
   });
 });

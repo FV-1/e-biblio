@@ -1,34 +1,22 @@
+/* Page « scanner » du téléphone : la caméra en haut, l'historique en bas. */
+
 :root {
-  --fond: #f5f4f0;
-  --surface: #ffffff;
-  --texte: #1d2126;
-  --doux: #5e6672;
-  --bordure: #d8d4cc;
-  --accent: #2b5c8f;
-  --accent-texte: #ffffff;
-  --succes: #23764a;
-  --succes-fond: #e1f2e8;
-  --alerte: #b0402a;
-  --alerte-fond: #fbe8e2;
+  --fond: #0f1216;
+  --surface: #1a1f26;
+  --surface-2: #232a33;
+  --texte: #eef1f4;
+  --texte-doux: #9aa5b1;
+  --accent: #78aee3;
+  --succes: #5fd08f;
+  --alerte: #f29a84;
+  --rayon: 14px;
+  color-scheme: dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
   color: var(--texte);
   background: var(--fond);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fond: #15171a;
-    --surface: #1e2125;
-    --texte: #e7e8ea;
-    --doux: #9ba2ac;
-    --bordure: #3a3f46;
-    --accent: #78aee3;
-    --accent-texte: #0f1620;
-    --succes: #7ccb9c;
-    --succes-fond: #1d3527;
-    --alerte: #f29a84;
-    --alerte-fond: #3f241d;
-  }
+  -webkit-text-size-adjust: 100%;
 }
 
 * {
@@ -44,89 +32,295 @@ body {
   display: none !important;
 }
 
-main {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: max(24px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  min-height: 100dvh;
 }
 
-header h1 {
-  margin: 0;
-  color: var(--accent);
-  font-size: 1.4rem;
-}
+/* ---------- Barre du haut ---------- */
 
-header p {
-  margin: 4px 0 0;
-  color: var(--doux);
-}
-
-.bouton-photo {
+.barre {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 72px;
-  padding: 16px;
-  border-radius: 14px;
-  background: var(--accent);
-  color: var(--accent-texte);
-  font-size: 1.15rem;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: rgb(15 18 22 / 88%);
+  backdrop-filter: blur(8px);
+}
+
+.marque {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
-  cursor: pointer;
+  font-size: 1.05rem;
 }
 
-#photo {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.aide,
-.pied {
-  margin: 0;
-  color: var(--doux);
-  font-size: 0.9rem;
-}
-
-.pied {
-  text-align: center;
-}
-
-#etat {
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid var(--bordure);
-  font-size: 1rem;
-}
-
-#etat.succes {
-  background: var(--succes-fond);
-  border-color: transparent;
-  color: var(--succes);
+.pastille {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
-#etat.erreur {
-  background: var(--alerte-fond);
-  border-color: transparent;
+.pastille-ok {
+  background: rgb(95 208 143 / 16%);
+  color: var(--succes);
+}
+
+.pastille-ko {
+  background: rgb(242 154 132 / 16%);
   color: var(--alerte);
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 12px;
-  border-top: 1px solid var(--bordure);
+/* ---------- Caméra ---------- */
+
+.camera {
+  position: relative;
+  height: 62dvh;
+  min-height: 320px;
+  overflow: hidden;
+  background: #000;
 }
 
-form label {
+.camera video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.viseur {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(82vw, 420px);
+  aspect-ratio: 2.2;
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 45%); /* assombrit tout sauf le cadre */
+  transition: box-shadow 200ms;
+}
+
+.coin {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 4px solid #fff;
+  transition: border-color 150ms;
+}
+
+.coin-hg { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
+.coin-hd { top: -2px; right: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 12px; }
+.coin-bg { bottom: -2px; left: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 12px; }
+.coin-bd { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+
+.laser {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  height: 2px;
+  border-radius: 2px;
+  background: #ff5a4f;
+  box-shadow: 0 0 10px 2px rgb(255 90 79 / 70%);
+  animation: balayage 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes balayage {
+  from { transform: translateY(-34px); }
+  to { transform: translateY(34px); }
+}
+
+/* Code reconnu : le cadre passe au vert un instant. */
+.viseur.trouve .coin {
+  border-color: var(--succes);
+}
+
+.viseur.trouve .laser {
+  background: var(--succes);
+  box-shadow: 0 0 14px 3px rgb(95 208 143 / 80%);
+  animation: none;
+}
+
+.viseur.trouve {
+  animation: impulsion 450ms ease-out;
+}
+
+@keyframes impulsion {
+  from { transform: translate(-50%, -50%) scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laser,
+  .viseur.trouve {
+    animation: none;
+  }
+}
+
+.consigne {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 76px;
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+
+.consigne.alerte {
+  color: #ffd2c6;
+}
+
+.commandes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.rond {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+.rond[aria-pressed='true'] {
+  background: #ffd75e;
+  color: #1a1a1a;
+}
+
+/* ---------- Accueil (avant la caméra) ---------- */
+
+.accueil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px 24px;
+  text-align: center;
+}
+
+.illustration svg {
+  width: 120px;
+  height: 76px;
+  stroke-width: 2.2;
+  color: var(--accent);
+}
+
+.accueil h1 {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+}
+
+.accueil p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--texte-doux);
+}
+
+.principal {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #0f1620;
+  font-weight: 700;
+}
+
+.accueil .principal {
+  width: min(100%, 320px);
+  margin-top: 8px;
+}
+
+.probleme {
+  padding: 12px 14px;
+  border-radius: var(--rayon);
+  background: rgb(242 154 132 / 12%);
+  color: #ffd2c6 !important;
+  text-align: left;
+}
+
+.lien {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Tiroir : saisie et historique ---------- */
+
+.tiroir {
+  flex: 1;
+  margin-top: -16px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  position: relative;
+  z-index: 2;
+}
+
+.message {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.message.succes {
+  background: rgb(95 208 143 / 14%);
+  color: var(--succes);
+}
+
+.message.erreur {
+  background: rgb(242 154 132 / 14%);
+  color: var(--alerte);
+}
+
+.saisie {
+  margin-bottom: 18px;
+}
+
+.saisie label {
+  display: block;
+  margin-bottom: 6px;
   font-weight: 600;
 }
 
@@ -135,27 +329,96 @@ form label {
   gap: 8px;
 }
 
-input,
-button {
-  font: inherit;
-  font-size: 1.05rem;
-}
-
-#isbn {
+.ligne input {
   flex: 1;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--bordure);
-  border-radius: 10px;
-  background: var(--surface);
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid #39424e;
+  border-radius: 12px;
+  background: var(--fond);
   color: var(--texte);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
 }
 
-button {
-  padding: 12px 18px;
-  border: none;
-  border-radius: 10px;
-  background: var(--accent);
-  color: var(--accent-texte);
+.ligne input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tiroir h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.compte {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--texte-doux);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.historique {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historique li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  animation: arrivee 220ms ease-out;
+}
+
+@keyframes arrivee {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+.historique .isbn {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.historique .etat {
+  font-size: 0.85rem;
   font-weight: 600;
+  color: var(--texte-doux);
+}
+
+.historique .ok .etat {
+  color: var(--succes);
+}
+
+.historique .ko .etat {
+  color: var(--alerte);
+}
+
+.historique button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0f1620;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.vide {
+  margin: 0;
+  color: var(--texte-doux);
 }

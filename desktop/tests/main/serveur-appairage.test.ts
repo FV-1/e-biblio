@@ -1,4 +1,9 @@
+import { request } from 'node:https';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { obtenirCertificat } from '../../src/main/appairage/certificat-local';
 import { ServeurAppairage } from '../../src/main/appairage/serveur-appairage';
 
 /** Vrai serveur HTTP sur 127.0.0.1 (port libre) : aucune sortie sur le réseau. */
@@ -116,5 +121,39 @@ describe('ServeurAppairage', () => {
     const { port } = await s.demarrer();
     expect(port).not.toBe(occupe);
     await s.arreter();
+  });
+});
+
+describe('ServeurAppairage en HTTPS (caméra en direct, ADR-008)', () => {
+  it('sert la page en HTTPS avec le certificat du poste, et autorise la caméra', async () => {
+    const dossier = await mkdtemp(join(tmpdir(), 'e-biblio-tls-'));
+    const securise = new ServeurAppairage({
+      ressources,
+      hote: '127.0.0.1',
+      portPrefere: 0,
+      genererJeton: () => 'jeton-tls',
+      onIsbn: () => undefined,
+      tls: () => obtenirCertificat(dossier, ['127.0.0.1']),
+    });
+    try {
+      expect(securise.protocole).toBe('https');
+      const { port } = await securise.demarrer();
+      // Certificat auto-signé : le test l'accepte, comme le téléphone après l'avertissement.
+      const reponse = await new Promise<{ statut: number; entetes: Record<string, unknown>; corps: string }>((resoudre, rejeter) => {
+        request({ host: '127.0.0.1', port, path: '/s/jeton-tls/', rejectUnauthorized: false }, (res) => {
+          let corps = '';
+          res.on('data', (m) => (corps += String(m)));
+          res.on('end', () => resoudre({ statut: res.statusCode ?? 0, entetes: res.headers, corps }));
+        })
+          .on('error', rejeter)
+          .end();
+      });
+      expect(reponse.statut).toBe(200);
+      expect(reponse.corps).toBe(ressources.html);
+      expect(reponse.entetes['permissions-policy']).toBe('camera=(self)');
+    } finally {
+      await securise.arreter();
+      await rm(dossier, { recursive: true, force: true });
+    }
   });
 });

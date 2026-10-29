@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import QRCode from 'qrcode';
 import { CANAUX_IPC, type ServiceInvocable } from '../commun/service-bibliotheque';
+import { adressesReseau } from './appairage/adresses-reseau';
 import { AppairageTelephone } from './appairage/appairage-telephone';
+import { obtenirCertificat } from './appairage/certificat-local';
 import { chargerRessourcesMobiles } from './appairage/ressources-mobiles';
 import { ServeurAppairage } from './appairage/serveur-appairage';
 import { ClientApiHttp } from './client-api-http';
@@ -30,6 +32,12 @@ function composerService(): { service: ServiceInvocable; arreter: () => Promise<
     serveur: new ServeurAppairage({
       ressources: chargerRessourcesMobiles(),
       portPrefere: PORT_APPAIRAGE,
+      // HTTPS : seule façon d'ouvrir la caméra en direct sur le téléphone (ADR-008).
+      tls: () =>
+        obtenirCertificat(
+          join(app.getPath('userData'), 'appairage'),
+          adressesReseau(networkInterfaces()).map((a) => a.ip),
+        ),
       onIsbn: (isbn) => {
         for (const fenetre of BrowserWindow.getAllWindows()) fenetre.webContents.send(CANAUX_IPC.isbnScanne, isbn);
       },

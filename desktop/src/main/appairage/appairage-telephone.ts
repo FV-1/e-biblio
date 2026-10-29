@@ -4,7 +4,7 @@ import { adressesReseau } from './adresses-reseau';
 import type { ServeurAppairage } from './serveur-appairage';
 
 export interface OptionsAppairage {
-  readonly serveur: Pick<ServeurAppairage, 'demarrer' | 'arreter'>;
+  readonly serveur: Pick<ServeurAppairage, 'demarrer' | 'arreter' | 'protocole'>;
   readonly interfacesReseau: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
   readonly genererQrCode: (texte: string) => Promise<string>;
 }
@@ -38,7 +38,7 @@ export class AppairageTelephone {
     return succes({
       adresses: await Promise.all(
         adresses.map(async ({ carte, ip }) => {
-          const url = `http://${ip}:${session.port}/s/${session.jeton}/`;
+          const url = `${this.options.serveur.protocole}://${ip}:${session.port}/s/${session.jeton}/`;
           return { carte, url, qrCode: await this.options.genererQrCode(url) };
         }),
       ),

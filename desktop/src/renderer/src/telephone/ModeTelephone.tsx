@@ -54,7 +54,12 @@ export function ModeTelephone({ appairage }: { appairage: Appairage }) {
         <ol>
           <li>Connectez le téléphone au <strong>même réseau Wi-Fi</strong> que cet ordinateur.</li>
           <li>Scannez ce QR code avec l’appareil photo du téléphone.</li>
-          <li>Photographiez le code-barres du livre : sa notice s’affiche ici.</li>
+          <li>
+            La première fois, le téléphone affiche « Connexion non privée » : touchez <strong>Paramètres avancés</strong> puis{' '}
+            <strong>Continuer</strong> (sur iPhone : <strong>Afficher les détails</strong> puis <strong>Visiter ce site</strong>). C’est
+            normal : la connexion est chiffrée par un certificat créé par cet ordinateur.
+          </li>
+          <li>Autorisez la caméra, puis visez le code-barres du livre : il est lu tout seul et sa notice s’affiche ici.</li>
         </ol>
 
         <p className="attente" role="status">

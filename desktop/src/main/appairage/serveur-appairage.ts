@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer as creerServeurTls } from 'node:https';
 import type { AddressInfo } from 'node:net';
 import { z } from 'zod';
 
@@ -21,6 +22,11 @@ export interface OptionsServeurAppairage {
   /** Port tenté en premier ; si occupé, un port libre est choisi. */
   readonly portPrefere?: number;
   readonly genererJeton?: () => string;
+  /**
+   * Certificat du poste : le serveur passe en HTTPS, seule façon d'ouvrir la
+   * caméra en direct sur un téléphone (ADR-008). Sans lui, HTTP simple.
+   */
+  readonly tls?: () => Promise<{ readonly cle: string; readonly cert: string }>;
 }
 
 const TAILLE_MAX_CORPS = 1024;
@@ -33,7 +39,7 @@ const TYPES: Record<string, string> = {
 };
 
 /**
- * Mini-serveur HTTP du poste, ouvert le temps de l'appairage d'un téléphone.
+ * Mini-serveur HTTP(S) du poste, ouvert le temps de l'appairage d'un téléphone.
  * Sécurité : toutes les routes exigent un jeton aléatoire (128 bits) présent
  * dans l'URL du QR code ; sans lui, le serveur ne révèle rien (404).
  * Le téléphone ne peut faire qu'une chose : transmettre un ISBN.
@@ -44,11 +50,17 @@ export class ServeurAppairage {
 
   constructor(private readonly options: OptionsServeurAppairage) {}
 
+  get protocole(): 'http' | 'https' {
+    return this.options.tls ? 'https' : 'http';
+  }
+
   /** Démarre le serveur (idempotent : renvoie la session en cours si elle existe). */
   async demarrer(): Promise<{ port: number; jeton: string }> {
     if (this.serveur && this.jeton) return { port: (this.serveur.address() as AddressInfo).port, jeton: this.jeton };
 
-    const serveur = createServer((req, res) => this.traiter(req, res));
+    const traiter = (req: IncomingMessage, res: ServerResponse) => this.traiter(req, res);
+    const tls = this.options.tls ? await this.options.tls() : null;
+    const serveur: Server = tls ? creerServeurTls({ key: tls.cle, cert: tls.cert }, traiter) : createServer(traiter);
     const hote = this.options.hote ?? '0.0.0.0';
     try {
       await ecouter(serveur, this.options.portPrefere ?? 0, hote);
@@ -75,8 +87,9 @@ export class ServeurAppairage {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(self)');
 
-    const [prefixe, jeton, fichier, ...reste] = new URL(req.url ?? '/', 'http://x').pathname.split('/').filter(Boolean);
+    const [prefixe, jeton, fichier, ...reste] = new URL(req.url ?? '/', 'https://x').pathname.split('/').filter(Boolean);
     if (prefixe !== 's' || !jeton || jeton !== this.jeton || reste.length > 0) {
       repondre(res, 404, 'text/plain; charset=utf-8', 'Session inconnue ou expirée : scannez le QR code affiché sur l’ordinateur.');
       return;

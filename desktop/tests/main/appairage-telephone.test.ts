@@ -34,6 +34,7 @@ describe('AppairageTelephone', () => {
     return {
       appels,
       serveur: {
+        protocole: 'https' as const,
         demarrer: async () => {
           appels.push('demarrer');
           if (echoue) throw new Error('EACCES');
@@ -58,8 +59,8 @@ describe('AppairageTelephone', () => {
       ok: true,
       valeur: {
         adresses: [
-          { carte: 'Wi-Fi', url: 'http://192.168.1.42:47800/s/abc/', qrCode: 'qr:http://192.168.1.42:47800/s/abc/' },
-          { carte: 'Ethernet', url: 'http://10.0.0.5:47800/s/abc/', qrCode: 'qr:http://10.0.0.5:47800/s/abc/' },
+          { carte: 'Wi-Fi', url: 'https://192.168.1.42:47800/s/abc/', qrCode: 'qr:https://192.168.1.42:47800/s/abc/' },
+          { carte: 'Ethernet', url: 'https://10.0.0.5:47800/s/abc/', qrCode: 'qr:https://10.0.0.5:47800/s/abc/' },
         ],
       },
     });
