@@ -86,10 +86,12 @@ L'adresse du serveur se règle de trois façons, par ordre de priorité :
   - Filtre texte, filtres « avec / sans ISBN » et « avec / sans couverture » (pratique pour repérer les notices à compléter).
   - Tri en cliquant sur les en-têtes, pagination par 25, 50 ou 100.
   - Un clic sur une ligne la **déplie** pour afficher chaque exemplaire, sa localisation et l'endroit où il a été vu s'il est mal rangé.
-- **Plan 3D** : la bibliothèque en volume (salles, étagères colorées par rayon), calculée à partir des coordonnées des emplacements.
-  - Cherchez un livre dans le panneau de gauche, ou cliquez sur **Voir sur le plan** depuis une carte de la recherche.
-  - Sa place prévue est marquée en bleu. S'il est mal rangé, l'étagère où il a été vu est marquée en rouge, avec un arc entre les deux.
-  - La position est vérifiée toutes les 3 s : après un scan, le repère se déplace tout seul. Glisser pour tourner, molette pour zoomer.
+- **Plan 3D** : la bibliothèque en volume, avec de vrais meubles (planches, fronton à la couleur du rayon) et les livres posés dessus.
+  - Cherchez un livre dans le panneau de gauche, cliquez sur **Voir sur le plan** depuis une carte de la recherche, ou ouvrez la liste **Mal rangés**.
+  - Sa place prévue est marquée en bleu. S'il est mal rangé, l'étagère où il a été vu est marquée en rouge, avec un arc entre les deux ; son livre dépasse de la planche.
+  - **Cliquez sur un meuble** : la caméra se place devant et la **vue « étagère »** s'ouvre. Le meuble y est vu de face, planche par planche, avec la tranche de chaque livre. Les intrus (vus ici, rangés ailleurs) sont en rouge, les absents (rangés ici, vus ailleurs) en pointillés. Un clic sur une tranche ouvre la fiche du livre. Échap referme la vue.
+  - Navigation : glisser pour tourner, clic droit pour déplacer, molette pour zoomer, flèches du clavier. La barre au-dessus du plan propose la vue d'ensemble, la vue de dessus, le zoom et l'accès direct à chaque salle.
+  - La position du livre suivi est vérifiée toutes les 3 s : après un scan, le repère se déplace tout seul.
   - Il faut WebGL (activé par défaut). Sinon, l'onglet l'indique et la localisation reste affichée en texte.
 - **Ajouter un livre**, de trois façons :
   1. **Par ISBN** : la notice (titre, auteurs, couverture) est affichée pour vérification avant l'ajout. Si l'ISBN est inconnu ou si Open Library ne répond pas, un bouton bascule vers la saisie manuelle en conservant l'ISBN.
